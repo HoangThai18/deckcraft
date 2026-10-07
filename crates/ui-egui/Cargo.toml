@@ -1,0 +1,26 @@
+[package]
+name = "slidecraft-ui-egui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SlideCraft egui frontend (PowerPoint-style UI); swappable — nothing below depends on it"
+
+[lints]
+workspace = true
+
+[dependencies]
+slidecraft-geom = { workspace = true }
+slidecraft-color = { workspace = true }
+slidecraft-model = { workspace = true }
+slidecraft-fonts = { workspace = true }
+slidecraft-text = { workspace = true }
+slidecraft-render = { workspace = true }
+slidecraft-anim = { workspace = true }
+slidecraft-engine = { workspace = true }
+egui = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+egui_kittest = { workspace = true, features = ["wgpu", "snapshot"] }

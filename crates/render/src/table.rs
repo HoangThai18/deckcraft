@@ -73,11 +73,7 @@ pub fn look(ctx: &Ctx, t: &Table, r: usize, c: usize) -> CellLook {
             border: Some((white, 1.0)),
         },
         "medium4" => CellLook {
-            fill: Some(if header || band || band_c {
-                tint(40000)
-            } else {
-                tint(20000)
-            }),
+            fill: Some(if header || band || band_c { tint(40000) } else { tint(20000) }),
             text: None,
             bold: header || total || first_col || last_col,
             border: Some((a, 0.75)),

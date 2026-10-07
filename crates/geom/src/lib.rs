@@ -210,6 +210,11 @@ pub fn snap(v: f64, step: f64) -> f64 {
     if step > 0.0 && step.is_finite() { (v / step).round() * step } else { v }
 }
 
+/// Flatten a path to move/line/close elements (tolerance 0.2).
+pub fn preset_flatten(path: &BezPath, f: &mut dyn FnMut(PathEl)) {
+    kurbo::flatten(path.iter(), 0.2, f);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -264,3 +269,4 @@ mod tests {
         assert!((dist_to_segment(Point::new(0.0, 3.0), Point::new(0.0, 0.0), Point::new(0.0, 0.0)) - 3.0).abs() < 1e-9);
     }
 }
+

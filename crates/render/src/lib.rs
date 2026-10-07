@@ -184,15 +184,54 @@ thread_local! {
     static RENDERER: std::cell::RefCell<Renderer> = std::cell::RefCell::new(Renderer::default());
 }
 
-/// Render slide `index` at `opts.scale` pixels per point.
+/// Does anything on this slide (or its layout/master graphics) use blur-based effects?
+pub fn needs_filters(pres: &Presentation, slide: &Slide) -> bool {
+    let Some(rctx) = Ctx::for_slide(pres, slide) else { return false };
+    let mut any = false;
+    let mut check = |shapes: &[Shape]| {
+        slidecraft_model::walk(shapes, &mut |s, _| {
+            if any {
+                return;
+            }
+            let (e, _) = resolve::effects(&rctx, s);
+            if e.is_some_and(|e| !e.is_empty()) {
+                any = true;
+            }
+        });
+    };
+    check(&slide.shapes);
+    if let Some(l) = rctx.layout {
+        check(&l.shapes);
+    }
+    check(&rctx.master.shapes);
+    any
+}
+
+/// Render slide `index` at `opts.scale` pixels per point. A panic inside the renderer becomes a
+/// blank image (logged), never a crash.
 pub fn render_slide(pres: &Presentation, index: usize, opts: &RenderOpts) -> Image {
     let Some(slide) = pres.slides.get(index) else { return Image::default() };
-    RENDERER.with(|r| r.borrow_mut().slide(pres, slide, index, opts))
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| RENDERER.with(|r| r.borrow_mut().slide(pres, slide, index, opts)))) {
+        Ok(img) => img,
+        Err(_) => {
+            log::error!("rendering slide {index} panicked; showing a blank slide");
+            RENDERER.with(|r| *r.borrow_mut() = Renderer::default());
+            let (w, h) = output_size(pres, opts);
+            Image { width: w as u32, height: h as u32, pixels: vec![255; w as usize * h as usize * 4] }
+        }
+    }
 }
 
 /// Render a layout (Slide Master view thumbnail and canvas).
 pub fn render_layout(pres: &Presentation, master: usize, layout: Option<usize>, opts: &RenderOpts) -> Image {
-    RENDERER.with(|r| r.borrow_mut().layout(pres, master, layout, opts))
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| RENDERER.with(|r| r.borrow_mut().layout(pres, master, layout, opts)))) {
+        Ok(img) => img,
+        Err(_) => {
+            log::error!("rendering a layout panicked; showing a blank image");
+            RENDERER.with(|r| *r.borrow_mut() = Renderer::default());
+            Image::default()
+        }
+    }
 }
 
 fn output_size(pres: &Presentation, opts: &RenderOpts) -> (u16, u16) {
@@ -318,7 +357,10 @@ impl Renderer {
         let mut ctx = RenderContext::new_with(
             w,
             h,
-            vello_cpu::RenderSettings { num_threads: if cfg!(target_arch = "wasm32") { 0 } else { opts.threads }, ..Default::default() },
+            vello_cpu::RenderSettings {
+                num_threads: if cfg!(target_arch = "wasm32") || needs_filters(pres, slide) { 0 } else { opts.threads },
+                ..Default::default()
+            },
         );
         if let Some(c) = opts.clear {
             ctx.set_paint(color(c, 1.0));
@@ -888,10 +930,9 @@ pub fn draw_layout(ctx: &mut RenderContext, l: &slidecraft_text::TextLayout, tr:
         ctx.fill_rect(&d.rect);
     }
     for run in &l.runs {
-        if (run.alpha <= 0.0 || run.color.a == 0)
-            && run.outline.is_none() {
-                continue;
-            }
+        if (run.alpha <= 0.0 || run.color.a == 0) && run.outline.is_none() {
+            continue;
+        }
         let k = run.size / run.face.upem.max(1.0);
         ctx.set_paint(color(run.color, run.alpha));
         for (gid, x, y) in &run.glyphs {
@@ -945,3 +986,28 @@ pub fn render_shape(pres: &Presentation, slide: &Slide, id: ShapeId, scale: f64)
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod mt_tests {
+    use super::*;
+
+    /// Regression: multithreaded rendering of a slide with shadows panicked inside vello_cpu.
+    #[test]
+    fn effects_render_with_threads_requested() {
+        let mut s = slidecraft_model::Presentation::default();
+        let sl = std::sync::Arc::make_mut(&mut s.slides[0]);
+        let mut sh = slidecraft_model::Shape {
+            id: ShapeId(900),
+            xfrm: Some(slidecraft_geom::Xfrm::new(10.0, 10.0, 100.0, 100.0)),
+            style: Some(slidecraft_model::ShapeStyle::accent(slidecraft_color::SchemeSlot::Accent1)),
+            ..Default::default()
+        };
+        sh.effects = Some(slidecraft_model::Effects { soft_edge: Some(5.0), ..Default::default() });
+        sl.shapes.push(sh);
+        assert!(needs_filters(&s, &s.slides[0]));
+        let img = RENDERER.with(|r| r.borrow_mut().slide(&s, &s.slides[0], 0, &RenderOpts { scale: 0.5, threads: 4, ..Default::default() }));
+        assert_eq!(img.width, 480);
+        // The shape itself is drawn (not a blank fallback).
+        assert_ne!(img.pixel(30, 30), [255, 255, 255, 255]);
+    }
+}

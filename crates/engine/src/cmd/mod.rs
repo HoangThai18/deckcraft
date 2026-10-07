@@ -242,7 +242,7 @@ pub(crate) fn shape_of(s: &Session, id: ShapeId) -> Result<slidecraft_model::Sha
 }
 
 /// Effective box of a shape (placeholders inherit theirs).
-pub(crate) fn xfrm_of(doc: &slidecraft_model::Presentation, sel: &crate::Selection, shape: &slidecraft_model::Shape) -> Xfrm {
+pub fn xfrm_of(doc: &slidecraft_model::Presentation, sel: &crate::Selection, shape: &slidecraft_model::Shape) -> Xfrm {
     if let Some(x) = shape.xfrm {
         return x;
     }

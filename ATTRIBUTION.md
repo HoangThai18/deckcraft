@@ -17,6 +17,8 @@ deck and UI icons are original work of the SlideCraft contributors (drawn or gen
 | `docs/brand/artcraft-mark.svg`, `docs/brand/artcraft-mark.png` | ArtCraft Team | ArtCraft brand kit | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | README footer, About |
 | `docs/brand/artcraft-mark-black.svg`, `docs/brand/artcraft-mark-black.png` | ArtCraft Team | ArtCraft brand kit | ArtCraft trademark, `docs/brand/LICENSE-brand.txt` | Mark for light backgrounds |
 | `docs/brand/LICENSE-brand.txt` | ArtCraft Team | craftrules `standards/license-files` | — (licence text) | Terms for the ArtCraft marks |
+| `assets/app-icon/slidecraft-1024.png`, `assets/app-icon/hicolor/*/apps/ai.storyteller.slidecraft.png` | SlideCraft contributors | rendered by SlideCraft from `assets/app-icon/icon-source.slidecraft` (shapes only) | MIT OR Apache-2.0 | Placeholder app icon (presentation board) until the mascot icon is drawn |
+| `assets/app-icon/icon-source.slidecraft` | SlideCraft contributors | made with `slidecraft-cli run` (see git history) | MIT OR Apache-2.0 | Source of the placeholder icon |
 
 ## Bundled through dependencies
 

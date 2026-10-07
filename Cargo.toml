@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*"]
-default-members = ["crates/*", "apps/slidecraft-cli"]
+default-members = ["crates/*", "apps/slidecraft", "apps/slidecraft-cli"]
 
 [workspace.package]
 version = "0.1.0"
@@ -20,6 +20,7 @@ slidecraft-text = { path = "crates/text" }
 slidecraft-render = { path = "crates/render" }
 slidecraft-pptx = { path = "crates/pptx" }
 slidecraft-format = { path = "crates/format" }
+slidecraft-anim = { path = "crates/anim" }
 slidecraft-engine = { path = "crates/engine" }
 slidecraft-mcp = { path = "crates/mcp" }
 slidecraft-ui-egui = { path = "crates/ui-egui" }
