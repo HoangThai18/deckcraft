@@ -8,6 +8,7 @@ pub mod file;
 pub mod format;
 pub mod insert;
 pub mod inspect;
+pub mod merge;
 pub mod review;
 pub mod shape;
 pub mod slide;
@@ -76,13 +77,14 @@ pub fn has_slide(s: &Session) -> std::result::Result<(), String> {
     if s.active().is_some_and(|d| !d.doc.slides.is_empty() || d.selection.target != crate::Target::Slides) { Ok(()) } else { Err("no slides".into()) }
 }
 pub const NOTHING_SELECTED: &str = "nothing selected";
+pub const SELECT_TWO: &str = "select two or more objects";
 pub fn has_selection(s: &Session) -> std::result::Result<(), String> {
     has_doc(s)?;
     if s.active().is_some_and(|d| !d.selection.shapes.is_empty()) { Ok(()) } else { Err(NOTHING_SELECTED.into()) }
 }
 pub fn has_two(s: &Session) -> std::result::Result<(), String> {
     has_doc(s)?;
-    if s.active().is_some_and(|d| d.selection.shapes.len() >= 2) { Ok(()) } else { Err("select two or more objects".into()) }
+    if s.active().is_some_and(|d| d.selection.shapes.len() >= 2) { Ok(()) } else { Err(SELECT_TWO.into()) }
 }
 pub fn has_text(s: &Session) -> std::result::Result<(), String> {
     has_doc(s)?;
@@ -127,6 +129,7 @@ pub fn command_specs() -> &'static [CommandSpec] {
         v.extend(insert::specs());
         v.extend(shape::specs());
         v.extend(arrange::specs());
+        v.extend(merge::specs());
         v.extend(text::specs());
         v.extend(format::specs());
         v.extend(design::specs());

@@ -349,7 +349,7 @@ impl Session {
     fn execute_unguarded(&mut self, id: &str, params: &Value) -> Result<Value> {
         let spec = find_command(id).ok_or_else(|| EngineError::UnknownCommand(id.into()))?;
         if let Err(e) = (spec.enabled)(self) {
-            let named = e == cmd::NOTHING_SELECTED && (params.get("ids").is_some() || params.get("id").is_some());
+            let named = (e == cmd::NOTHING_SELECTED || e == cmd::SELECT_TWO) && (params.get("ids").is_some() || params.get("id").is_some());
             if !named {
                 return Err(EngineError::Disabled(id.into(), e));
             }

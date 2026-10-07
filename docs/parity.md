@@ -11,12 +11,12 @@ Each row is scored **D** (done), **P** (partial: works but lacks options, UI or 
 Live Presentations), add-ins and VBA macros.
 
 <!-- SUMMARY -->
-**Weighted breadth parity: 76%** over 187 features.
+**Weighted breadth parity: 77%** over 187 features.
 
 | Priority | Features | Done | Partial | Missing | Parity |
 |---|---|---|---|---|---|
 | P0 | 72 | 58 | 13 | 1 | 90% |
-| P1 | 65 | 34 | 23 | 8 | 70% |
+| P1 | 65 | 35 | 23 | 7 | 72% |
 | P2 | 50 | 11 | 11 | 28 | 33% |
 
 | Area | Parity |
@@ -26,7 +26,7 @@ Live Presentations), add-ins and VBA macros.
 | Slides | 95% |
 | Views | 90% |
 | Masters & themes | 80% |
-| Shapes | 79% |
+| Shapes | 86% |
 | Format | 75% |
 | Arrange | 100% |
 | Text | 83% |
@@ -117,7 +117,7 @@ Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Sh
 | Shapes | Connector glue to connection sites | P1 | D |
 | Shapes | Freeform, curve and scribble tools | P1 | D |
 | Shapes | Edit points | P1 | M |
-| Shapes | Merge shapes (union, combine, fragment, intersect, subtract) | P1 | M |
+| Shapes | Merge shapes (union, combine, fragment, intersect, subtract) | P1 | D |
 | Shapes | Change shape | P1 | D |
 | Shapes | Text boxes | P0 | D |
 | Shapes | WordArt | P1 | P |

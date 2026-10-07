@@ -1851,6 +1851,16 @@ fn shape_format(app: &mut SlideApp, ui: &mut Ui) {
                 run(app, "shape.change", json!({"preset": p}));
             }
         });
+        let can_merge = enabled(app, "shape.merge");
+        let r = big_button(ui, Icon::MergeShapes, "Merge\nShapes", can_merge).on_hover_text("Merge Shapes");
+        egui::Popup::menu(&r).show(|ui| {
+            for (op, label) in slidecraft_engine::cmd::merge::OPS {
+                if ui.button(label).clicked() {
+                    run(app, "shape.merge", json!({"op": op}));
+                    ui.close();
+                }
+            }
+        });
     });
     group(ui, |ui| {
         let r = big_button(ui, Icon::QuickStyles, "Shape\nStyles", sel);

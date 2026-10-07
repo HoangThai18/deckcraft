@@ -20,6 +20,7 @@ slidecraft-format = { workspace = true }
 slidecraft-pptx = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+i_overlay = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
 image = { workspace = true }
