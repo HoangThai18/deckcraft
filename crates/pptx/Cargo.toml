@@ -16,3 +16,11 @@ quick-xml = { workspace = true }
 zip = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+
+[dev-dependencies]
+slidecraft-engine = { workspace = true }
+serde_json = { workspace = true }
+slidecraft-color = { workspace = true }
+slidecraft-geom = { workspace = true }
+image = { workspace = true }
+zip = { workspace = true }

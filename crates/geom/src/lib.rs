@@ -269,4 +269,3 @@ mod tests {
         assert!((dist_to_segment(Point::new(0.0, 3.0), Point::new(0.0, 0.0), Point::new(0.0, 0.0)) - 3.0).abs() < 1e-9);
     }
 }
-

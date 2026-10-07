@@ -11,22 +11,22 @@ Each row is scored **D** (done), **P** (partial: works but lacks options, UI or 
 Live Presentations), add-ins and VBA macros.
 
 <!-- SUMMARY -->
-**Weighted breadth parity: 74%** over 187 features.
+**Weighted breadth parity: 76%** over 187 features.
 
 | Priority | Features | Done | Partial | Missing | Parity |
 |---|---|---|---|---|---|
-| P0 | 72 | 55 | 16 | 1 | 88% |
-| P1 | 65 | 32 | 23 | 10 | 67% |
+| P0 | 72 | 58 | 13 | 1 | 90% |
+| P1 | 65 | 33 | 23 | 9 | 68% |
 | P2 | 50 | 11 | 11 | 28 | 33% |
 
 | Area | Parity |
 |---|---|
 | Application shell | 71% |
-| Files | 59% |
+| Files | 67% |
 | Slides | 95% |
 | Views | 90% |
 | Masters & themes | 80% |
-| Shapes | 60% |
+| Shapes | 72% |
 | Format | 75% |
 | Arrange | 100% |
 | Text | 83% |
@@ -44,7 +44,7 @@ Live Presentations), add-ins and VBA macros.
 | Automation (✱) | 100% |
 | Platforms (✱) | 25% |
 
-Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Shape Format, Picture Format, Table Design/Layout, Chart Design), Open PowerPoint .pptx, Save as PowerPoint .pptx, Autosave and crash recovery, Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending), Format background (solid, gradient, picture, pattern), Connectors (straight, elbow, curved), Gradient fill (linear, radial, rectangular, path), Format Shape pane, Edit chart data, Crop (and crop to shape, aspect ratio), Insert audio (any common format), Audio/video playback in the show, Animation pane (reorder, timing), Presenter view (notes, next slide, timer), macOS, Windows, Linux builds.
+Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Shape Format, Picture Format, Table Design/Layout, Chart Design), Autosave and crash recovery, Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending), Format background (solid, gradient, picture, pattern), Gradient fill (linear, radial, rectangular, path), Format Shape pane, Edit chart data, Crop (and crop to shape, aspect ratio), Insert audio (any common format), Audio/video playback in the show, Animation pane (reorder, timing), Presenter view (notes, next slide, timer), macOS, Windows, Linux builds.
 
 ## Rows
 
@@ -63,8 +63,8 @@ Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Sh
 | Application shell | Preferences (autosave, units, defaults) | P2 | P |
 | Files | New blank presentation | P0 | D |
 | Files | Native file format (open/save) | P0 | D |
-| Files | Open PowerPoint .pptx | P0 | P |
-| Files | Save as PowerPoint .pptx | P0 | P |
+| Files | Open PowerPoint .pptx | P0 | D |
+| Files | Save as PowerPoint .pptx | P0 | D |
 | Files | Open/save .potx/.ppsx/.pptm variants | P2 | M |
 | Files | Legacy .ppt (binary) import | P2 | M |
 | Files | Save as template | P1 | D |
@@ -113,8 +113,8 @@ Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Sh
 | Shapes | Preset shapes (lines, rectangles, basic, arrows, equation, flowchart, stars, callouts) | P0 | D |
 | Shapes | Action buttons | P2 | D |
 | Shapes | Adjustment handles | P0 | D |
-| Shapes | Connectors (straight, elbow, curved) | P0 | P |
-| Shapes | Connector glue to connection sites | P1 | M |
+| Shapes | Connectors (straight, elbow, curved) | P0 | D |
+| Shapes | Connector glue to connection sites | P1 | D |
 | Shapes | Freeform, curve and scribble tools | P1 | M |
 | Shapes | Edit points | P1 | M |
 | Shapes | Merge shapes (union, combine, fragment, intersect, subtract) | P1 | M |
