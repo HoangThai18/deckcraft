@@ -1,14 +1,14 @@
 [package]
-name = "slidecraft-anim"
+name = "deckcraft-anim"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "SlideCraft slide show timing: animation sequences, per-shape animation state over time, and transition frame layouts"
+description = "DeckCraft slide show timing: animation sequences, per-shape animation state over time, and transition frame layouts"
 
 [lints]
 workspace = true
 
 [dependencies]
-slidecraft-model = { workspace = true }
-slidecraft-geom = { workspace = true }
+deckcraft-model = { workspace = true }
+deckcraft-geom = { workspace = true }
 serde = { workspace = true }

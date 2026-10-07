@@ -7,7 +7,7 @@
   </a>
 </p>
 
-<h1 align="center">SlideCraft</h1>
+<h1 align="center">DeckCraft</h1>
 
 <p align="center">
   <b>Presentations and slide shows; an open-source, clean-room reimplementation of Microsoft PowerPoint, rebuilt in pure Rust.</b>
@@ -32,7 +32,7 @@
 </p>
 
 <p align="center">
-  <a href="https://getartcraft.com/apps/slidecraft"><b>SlideCraft on getartcraft.com</b></a> ·
+  <a href="https://getartcraft.com/apps/deckcraft"><b>DeckCraft on getartcraft.com</b></a> ·
   <a href="https://getartcraft.com/">ArtCraft</a> ·
   <a href="https://getartcraft.com/apps">All Crafting Apps</a>
 </p>
@@ -53,7 +53,7 @@
 
 ## What works today
 
-SlideCraft is in early development. Today:
+DeckCraft is in early development. Today:
 
 - **Presentation model** with slide masters, eleven layouts, placeholders that inherit position and
   formatting, themes (colour, font and effect schemes), sections, notes, comments, transitions and
@@ -70,25 +70,25 @@ SlideCraft is in early development. Today:
 ## Getting started
 
 ```sh
-git clone https://github.com/storytold/slidecraft
-cd slidecraft
-cargo run --release -p slidecraft-cli -- render --sample --all --scale 1 out/
+git clone https://github.com/storytold/deckcraft
+cd deckcraft
+cargo run --release -p deckcraft-cli -- render --sample --all --scale 1 out/
 ```
 
 Fonts come from [craft-fonts](https://github.com/storytold/craft-fonts): clone it next to this repo
-(`../craft-fonts`) and local builds pick it up automatically; without it SlideCraft uses your system
+(`../craft-fonts`) and local builds pick it up automatically; without it DeckCraft uses your system
 fonts.
 
 ## Agents, CLI and MCP
 
-Every action in SlideCraft is a command with a stable id, so people, scripts and AI agents use the
+Every action in DeckCraft is a command with a stable id, so people, scripts and AI agents use the
 same verbs:
 
 ```sh
-slidecraft-cli commands format.          # list commands
-slidecraft-cli run --sample --cmd 'slide.new={"layout":"titleOnly","title":"Hello"}' --save hello.slidecraft
-slidecraft-cli mcp                       # MCP server over stdio (headless)
-slidecraft-cli mcp --connect 7979        # drive the running app (slidecraft --control 7979)
+deckcraft-cli commands format.          # list commands
+deckcraft-cli run --sample --cmd 'slide.new={"layout":"titleOnly","title":"Hello"}' --save hello.deckcraft
+deckcraft-cli mcp                       # MCP server over stdio (headless)
+deckcraft-cli mcp --connect 7979        # drive the running app (deckcraft --control 7979)
 ```
 
 ## Roadmap
@@ -97,7 +97,7 @@ See [ROADMAP.md](ROADMAP.md) for milestones, parity estimates and what's next.
 
 ## The Crafting Apps
 
-SlideCraft is one of the **Crafting Apps**: free, open-source creative tools from the
+DeckCraft is one of the **Crafting Apps**: free, open-source creative tools from the
 [ArtCraft](https://getartcraft.com/) team, each written from scratch in Rust and each able to
 stand on its own.
 
@@ -110,7 +110,7 @@ stand on its own.
 | <img src="https://raw.githubusercontent.com/storytold/printcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.printcraft.png" alt="" width="32" height="32"> | **PrintCraft** | Reading, organizing and protecting PDFs | [GitHub](https://github.com/storytold/printcraft) | [Website](https://getartcraft.com/apps/printcraft) |
 | <img src="https://raw.githubusercontent.com/storytold/effectcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.effectcraft.png" alt="" width="32" height="32"> | **EffectCraft** | Motion graphics and visual effects | [GitHub](https://github.com/storytold/effectcraft) | [Website](https://getartcraft.com/apps/effectcraft) |
 | <img src="https://raw.githubusercontent.com/storytold/designcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.designcraft.png" alt="" width="32" height="32"> | **DesignCraft** | Page layout and publishing | [GitHub](https://github.com/storytold/designcraft) | [Website](https://getartcraft.com/apps/designcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/slidecraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.slidecraft.png" alt="" width="32" height="32"> | **SlideCraft** | **Presentations and slide shows · you are here** | [GitHub](https://github.com/storytold/slidecraft) | [Website](https://getartcraft.com/apps/slidecraft) |
+| <img src="https://raw.githubusercontent.com/storytold/deckcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.deckcraft.png" alt="" width="32" height="32"> | **DeckCraft** | **Presentations and slide shows · you are here** | [GitHub](https://github.com/storytold/deckcraft) | [Website](https://getartcraft.com/apps/deckcraft) |
 
 And [**ArtCraft**](https://getartcraft.com/) itself, our AI image and video studio for artists who want real control.
 
@@ -133,26 +133,26 @@ And [**ArtCraft**](https://getartcraft.com/) itself, our AI image and video stud
   <a href="https://discord.gg/artcraft"><b>discord.gg/artcraft</b></a> ·
   <a href="https://getartcraft.com/">getartcraft.com</a> ·
   <a href="https://getartcraft.com/apps">The Crafting Apps</a> ·
-  <a href="https://getartcraft.com/apps/slidecraft">SlideCraft</a>
+  <a href="https://getartcraft.com/apps/deckcraft">DeckCraft</a>
 </p>
 
 ## License and credits
 
-SlideCraft is dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
-Copyright (c) 2026 ArtCraft Team and the SlideCraft contributors. Required notices are in [NOTICE](NOTICE).
+DeckCraft is dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
+Copyright (c) 2026 ArtCraft Team and the DeckCraft contributors. Required notices are in [NOTICE](NOTICE).
 
 Bundled fonts, icons, images and other assets keep their own open licenses; each one is listed
 with its author, source and license in [ATTRIBUTION.md](ATTRIBUTION.md).
 
-SlideCraft's themes, layouts, shape geometry, icons and sample decks are original work, drawn or
+DeckCraft's themes, layouts, shape geometry, icons and sample decks are original work, drawn or
 generated in code; no Microsoft artwork, fonts, themes or templates are used.
 
 The ArtCraft name, wordmark and logos in [`docs/brand/`](docs/brand/) are trademarks of the
 ArtCraft Team and are not covered by this license. They may be used only unmodified, and only as
-part of this repository and SlideCraft, under [`docs/brand/LICENSE-brand.txt`](docs/brand/LICENSE-brand.txt).
+part of this repository and DeckCraft, under [`docs/brand/LICENSE-brand.txt`](docs/brand/LICENSE-brand.txt).
 Forks and modified versions must remove them.
 
-<sub>Microsoft and PowerPoint are trademarks of the Microsoft group of companies. Adobe, Photoshop, Illustrator, Premiere Pro, Lightroom, Acrobat, After Effects and InDesign are trademarks or registered trademarks of Adobe Inc. in the United States and/or other countries. SlideCraft is an independent, open-source project and is not affiliated with, sponsored by or endorsed by Microsoft Corporation or Adobe Inc.; these names are used only to describe the workflows it is compatible with.</sub>
+<sub>Microsoft and PowerPoint are trademarks of the Microsoft group of companies. Adobe, Photoshop, Illustrator, Premiere Pro, Lightroom, Acrobat, After Effects and InDesign are trademarks or registered trademarks of Adobe Inc. in the United States and/or other countries. DeckCraft is an independent, open-source project and is not affiliated with, sponsored by or endorsed by Microsoft Corporation or Adobe Inc.; these names are used only to describe the workflows it is compatible with.</sub>
 
 <p align="center">
   <a href="https://getartcraft.com/"><img alt="ArtCraft" src="docs/brand/artcraft-mark.svg" width="28"></a><br>

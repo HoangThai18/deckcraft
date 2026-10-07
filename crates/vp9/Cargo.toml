@@ -1,5 +1,5 @@
 [package]
-name = "slidecraft-vp9"
+name = "deckcraft-vp9"
 description = "Clean-room pure-Rust VP9 decoder (VP9 Bitstream & Decoding Process Specification)"
 version.workspace = true
 edition.workspace = true
@@ -14,6 +14,6 @@ default = ["threads"]
 threads = ["dep:rayon"]
 
 [dependencies]
-slidecraft-bitstream = { workspace = true }
+deckcraft-bitstream = { workspace = true }
 thiserror = { workspace = true }
 rayon = { workspace = true, optional = true }

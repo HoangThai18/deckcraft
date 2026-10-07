@@ -1,8 +1,8 @@
 //! DrawingML writing: colours, fills, lines, effects, transforms and text.
 
-use slidecraft_geom::{Xfrm, pt_to_emu};
-use slidecraft_model::style::{ColorBase, ColorRef, Compound, Dash, Effects, Fill, GradientShape, Line, LineCap, LineJoin, PictureFill, PictureMode};
-use slidecraft_model::text::{
+use deckcraft_geom::{Xfrm, pt_to_emu};
+use deckcraft_model::style::{ColorBase, ColorRef, Compound, Dash, Effects, Fill, GradientShape, Line, LineCap, LineJoin, PictureFill, PictureMode};
+use deckcraft_model::text::{
     Action, AutoFit, BodyProps, Bullet, Caps, Hyperlink, ListStyle, ParaProps, Paragraph, RunKind, RunProps, Spacing, Strike, TextBody,
 };
 
@@ -42,7 +42,7 @@ pub fn color(w: &mut W, c: &ColorRef) {
         }
     };
     let rgb_alpha = match &c.base {
-        ColorBase::Rgb { rgb } if rgb.a < 255 && !c.mods.iter().any(|m| matches!(m, slidecraft_color::ColorTransform::Alpha(_))) => {
+        ColorBase::Rgb { rgb } if rgb.a < 255 && !c.mods.iter().any(|m| matches!(m, deckcraft_color::ColorTransform::Alpha(_))) => {
             Some((rgb.a as i64 * 100_000 / 255) as i32)
         }
         _ => None,
@@ -81,7 +81,7 @@ pub fn fill(w: &mut W, x: &mut Exp, o: &mut Out, f: &Fill) {
             w.open0("a:gsLst");
             let mut stops = g.stops.clone();
             if stops.is_empty() {
-                stops.push(slidecraft_model::style::GradientStop { pos: 0.0, color: ColorRef::rgb(slidecraft_color::Rgba::WHITE) });
+                stops.push(deckcraft_model::style::GradientStop { pos: 0.0, color: ColorRef::rgb(deckcraft_color::Rgba::WHITE) });
             }
             if stops.len() == 1 {
                 let mut s = stops[0].clone();
@@ -142,7 +142,7 @@ pub fn blip_fill(w: &mut W, x: &mut Exp, o: &mut Out, tag: &str, pf: &PictureFil
             color(w, &ColorRef::rgb(c));
             w.close("a:clrFrom");
             w.open0("a:clrTo");
-            color(w, &ColorRef::rgb(c).with(slidecraft_color::ColorTransform::Alpha(0)));
+            color(w, &ColorRef::rgb(c).with(deckcraft_color::ColorTransform::Alpha(0)));
             w.close("a:clrTo");
             w.close("a:clrChange");
         }
@@ -249,7 +249,7 @@ pub fn line(w: &mut W, x: &mut Exp, o: &mut Out, tag: &str, l: &Line) {
     w.close(tag);
 }
 
-fn shadow(w: &mut W, tag: &str, s: &slidecraft_model::style::Shadow) {
+fn shadow(w: &mut W, tag: &str, s: &deckcraft_model::style::Shadow) {
     let mut a = A::new().a("blurRad", emu(s.blur).max(0)).a("dist", emu(s.dist).max(0)).a("dir", ang(s.dir));
     if tag == "a:outerShdw" {
         if s.sx != 1.0 {

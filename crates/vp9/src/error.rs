@@ -1,4 +1,4 @@
-use slidecraft_bitstream::BitError;
+use deckcraft_bitstream::BitError;
 
 /// Errors produced by the decoder.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

@@ -1,7 +1,7 @@
 //! Slide show navigation: click steps, slide order (hidden slides, custom shows, ranges), loop
 //! and automatic advance.
 
-use slidecraft_model::Presentation;
+use deckcraft_model::Presentation;
 
 use crate::Timeline;
 

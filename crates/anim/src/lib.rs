@@ -1,4 +1,4 @@
-//! Slide show timing for SlideCraft.
+//! Slide show timing for DeckCraft.
 //!
 //! - [`Timeline`]: a slide's animation list grouped into click steps, with per-shape (and
 //!   per-paragraph) [`AnimState`] at any point of the show.
@@ -22,8 +22,8 @@ mod transition;
 #[cfg(test)]
 mod tests;
 
+pub use deckcraft_model::Rgba;
 use serde::{Deserialize, Serialize};
-pub use slidecraft_model::Rgba;
 
 pub use easing::ease;
 pub use morph::{morph_pairs, morph_xfrm};

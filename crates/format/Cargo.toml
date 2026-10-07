@@ -1,15 +1,15 @@
 [package]
-name = "slidecraft-format"
+name = "deckcraft-format"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "SlideCraft native file format (.slidecraft: zip of a JSON manifest plus media) and outline text import/export"
+description = "DeckCraft native file format (.deckcraft: zip of a JSON manifest plus media) and outline text import/export"
 
 [lints]
 workspace = true
 
 [dependencies]
-slidecraft-model = { workspace = true }
+deckcraft-model = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 zip = { workspace = true }

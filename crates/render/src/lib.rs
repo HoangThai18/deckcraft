@@ -1,4 +1,4 @@
-//! The SlideCraft renderer: draws slides, layouts and masters with `vello_cpu`.
+//! The DeckCraft renderer: draws slides, layouts and masters with `vello_cpu`.
 //!
 //! One code path serves the editor canvas, thumbnails, image/PDF-raster export and the slide show:
 //! [`render_slide`] draws the background, the master and layout graphics, then the slide's shapes
@@ -16,15 +16,15 @@ mod table;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use deckcraft_color::Rgba;
+use deckcraft_fonts::FontDb;
+use deckcraft_geom::preset::{self, FillMode, Geometry, SubPath};
+use deckcraft_model::resolve::{self, Ctx};
+use deckcraft_model::style::{Effects, Fill, Line};
+use deckcraft_model::text::TextBody;
+use deckcraft_model::{Geom, PhType, Presentation, Shape, ShapeId, ShapeKind, Slide};
+use deckcraft_text::{Fields, Opts};
 use kurbo::{Affine, BezPath, PathEl, Point, Rect, Shape as _, Vec2};
-use slidecraft_color::Rgba;
-use slidecraft_fonts::FontDb;
-use slidecraft_geom::preset::{self, FillMode, Geometry, SubPath};
-use slidecraft_model::resolve::{self, Ctx};
-use slidecraft_model::style::{Effects, Fill, Line};
-use slidecraft_model::text::TextBody;
-use slidecraft_model::{Geom, PhType, Presentation, Shape, ShapeId, ShapeKind, Slide};
-use slidecraft_text::{Fields, Opts};
 use vello_common::filter_effects::{EdgeMode, Filter, FilterPrimitive};
 use vello_cpu::{RenderContext, Resources, peniko};
 
@@ -208,7 +208,7 @@ pub fn needs_filters(pres: &Presentation, slide: &Slide) -> bool {
     let Some(rctx) = Ctx::for_slide(pres, slide) else { return false };
     let mut any = false;
     let mut check = |shapes: &[Shape]| {
-        slidecraft_model::walk(shapes, &mut |s, _| {
+        deckcraft_model::walk(shapes, &mut |s, _| {
             if any {
                 return;
             }
@@ -498,7 +498,7 @@ impl Renderer {
         match &s.kind {
             ShapeKind::Group { children, child } => {
                 let ch = Rect::new(child.x, child.y, child.x + child.w, child.y + child.h);
-                let gm = parent * slidecraft_geom::group_child_affine(&x, ch);
+                let gm = parent * deckcraft_geom::group_child_affine(&x, ch);
                 for c in children {
                     self.shape(ctx, f, rctx, c, gm, depth + 1);
                 }
@@ -537,7 +537,7 @@ impl Renderer {
         let outline = geo.outline();
         // Placeholders in the editor: dashed outline and prompt, nothing else when empty.
         let empty_ph = s.ph.is_some() && s.text.as_ref().is_none_or(TextBody::is_empty) && !is_pic && !matches!(s.kind, ShapeKind::Media(_));
-        let fill = if let Some(t) = st.tint { Some(Fill::solid(slidecraft_model::ColorRef::rgb(t))) } else { fill };
+        let fill = if let Some(t) = st.tint { Some(Fill::solid(deckcraft_model::ColorRef::rgb(t))) } else { fill };
         // Effects below the shape.
         if let Some(e) = &effects {
             self.effects_below(ctx, rctx, e, fx_ph, &geo, &fill, m, w, h);
@@ -561,7 +561,7 @@ impl Renderer {
                 ctx.set_transform(m);
                 let bounds = Rect::new(0.0, 0.0, w, h);
                 if let Some(p) = mc.poster {
-                    let pf = slidecraft_model::style::PictureFill { media: p, ..Default::default() };
+                    let pf = deckcraft_model::style::PictureFill { media: p, ..Default::default() };
                     paint::picture(ctx, f.pres, &pf, bounds, m);
                 } else if mc.video {
                     ctx.set_paint(peniko::Color::from_rgba8(20, 20, 24, 255));
@@ -640,7 +640,7 @@ impl Renderer {
         {
             let tr = geo.text_rect;
             if !body.is_empty() {
-                let l = slidecraft_text::layout(rctx, s, body, &Opts { rect: tr, fields: &f.fields, prompt_color: None, no_shrink: false });
+                let l = deckcraft_text::layout(rctx, s, body, &Opts { rect: tr, fields: &f.fields, prompt_color: None, no_shrink: false });
                 draw_layout_with(ctx, &l, tr, m, &st.paras);
             } else if f.opts.edit && s.ph.is_some() {
                 let kind = s.ph_type().unwrap_or(PhType::Body);
@@ -747,7 +747,7 @@ fn blur(sigma: f64) -> Filter {
 }
 
 fn stroke(ctx: &mut RenderContext, rctx: &Ctx, line: &Line, ph: Option<Rgba>, path: &BezPath, m: Affine, lw: f64) {
-    use slidecraft_model::style::{LineCap, LineJoin};
+    use deckcraft_model::style::{LineCap, LineJoin};
     let cap = match line.cap.unwrap_or_default() {
         LineCap::Flat => kurbo::Cap::Butt,
         LineCap::Round => kurbo::Cap::Round,
@@ -896,10 +896,10 @@ fn prompt_body(rctx: &Ctx, s: &Shape, kind: PhType) -> TextBody {
     }
     let mut t = TextBody::from_text(txt);
     if matches!(kind, PhType::Picture | PhType::Chart | PhType::Table | PhType::Media | PhType::Diagram | PhType::ClipArt) {
-        t.body.anchor = Some(slidecraft_model::text::Anchor::Bottom);
+        t.body.anchor = Some(deckcraft_model::text::Anchor::Bottom);
         if let Some(p) = t.paragraphs.first_mut() {
-            p.props.align = Some(slidecraft_model::text::Align::Center);
-            p.props.bullet = Some(slidecraft_model::text::Bullet::None);
+            p.props.align = Some(deckcraft_model::text::Align::Center);
+            p.props.bullet = Some(deckcraft_model::text::Bullet::None);
             p.props.margin_left = Some(0.0);
             p.props.indent = Some(0.0);
             for r in &mut p.runs {
@@ -914,7 +914,7 @@ thread_local! {
     static GLYPH_CACHE: std::cell::RefCell<HashMap<(u32, u32), Arc<BezPath>>> = std::cell::RefCell::new(HashMap::new());
 }
 
-fn glyph(face: &slidecraft_fonts::FontFace, gid: u32) -> Arc<BezPath> {
+fn glyph(face: &deckcraft_fonts::FontFace, gid: u32) -> Arc<BezPath> {
     let key = (face.id(), gid);
     if let Some(p) = GLYPH_CACHE.with(|c| c.borrow().get(&key).cloned()) {
         return p;
@@ -932,17 +932,17 @@ fn glyph(face: &slidecraft_fonts::FontFace, gid: u32) -> Arc<BezPath> {
 
 /// Draw a text body into shape space `m` within the text rect.
 pub fn draw_text(ctx: &mut RenderContext, rctx: &Ctx, s: &Shape, body: &TextBody, tr: Rect, m: Affine, fields: &dyn Fields, prompt: Option<Rgba>) {
-    let l = slidecraft_text::layout(rctx, s, body, &Opts { rect: tr, fields, prompt_color: prompt, no_shrink: false });
+    let l = deckcraft_text::layout(rctx, s, body, &Opts { rect: tr, fields, prompt_color: prompt, no_shrink: false });
     draw_layout(ctx, &l, tr, m);
 }
 
 /// Draw an already laid-out text block.
-pub fn draw_layout(ctx: &mut RenderContext, l: &slidecraft_text::TextLayout, tr: Rect, m: Affine) {
+pub fn draw_layout(ctx: &mut RenderContext, l: &deckcraft_text::TextLayout, tr: Rect, m: Affine) {
     draw_layout_with(ctx, l, tr, m, &[]);
 }
 
 /// Draw a laid-out text block with per-paragraph animation states.
-pub fn draw_layout_with(ctx: &mut RenderContext, l: &slidecraft_text::TextLayout, tr: Rect, m: Affine, paras: &[(usize, ParaState)]) {
+pub fn draw_layout_with(ctx: &mut RenderContext, l: &deckcraft_text::TextLayout, tr: Rect, m: Affine, paras: &[(usize, ParaState)]) {
     let para = |i: usize| paras.iter().find(|(p, _)| *p == i).map(|(_, s)| *s).unwrap_or_default();
     let m = if l.rotation != 0.0 {
         let c = tr.center().to_vec2();
@@ -950,7 +950,7 @@ pub fn draw_layout_with(ctx: &mut RenderContext, l: &slidecraft_text::TextLayout
     } else {
         m
     };
-    let deco = |ctx: &mut RenderContext, d: &slidecraft_text::Deco| {
+    let deco = |ctx: &mut RenderContext, d: &deckcraft_text::Deco| {
         let ps = para(d.para);
         if !ps.visible || ps.opacity <= 0.001 {
             return;
@@ -1031,15 +1031,15 @@ mod mt_tests {
     /// Regression: multithreaded rendering of a slide with shadows panicked inside vello_cpu.
     #[test]
     fn effects_render_with_threads_requested() {
-        let mut s = slidecraft_model::Presentation::default();
+        let mut s = deckcraft_model::Presentation::default();
         let sl = std::sync::Arc::make_mut(&mut s.slides[0]);
-        let mut sh = slidecraft_model::Shape {
+        let mut sh = deckcraft_model::Shape {
             id: ShapeId(900),
-            xfrm: Some(slidecraft_geom::Xfrm::new(10.0, 10.0, 100.0, 100.0)),
-            style: Some(slidecraft_model::ShapeStyle::accent(slidecraft_color::SchemeSlot::Accent1)),
+            xfrm: Some(deckcraft_geom::Xfrm::new(10.0, 10.0, 100.0, 100.0)),
+            style: Some(deckcraft_model::ShapeStyle::accent(deckcraft_color::SchemeSlot::Accent1)),
             ..Default::default()
         };
-        sh.effects = Some(slidecraft_model::Effects { soft_edge: Some(5.0), ..Default::default() });
+        sh.effects = Some(deckcraft_model::Effects { soft_edge: Some(5.0), ..Default::default() });
         sl.shapes.push(sh);
         assert!(needs_filters(&s, &s.slides[0]));
         let img = RENDERER.with(|r| r.borrow_mut().slide(&s, &s.slides[0], 0, &RenderOpts { scale: 0.5, threads: 4, ..Default::default() }));

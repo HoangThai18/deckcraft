@@ -2,11 +2,11 @@
 //! and the overlays drawn on top (selection box and handles, smart guides, marquee, drawing
 //! previews, the text caret and text selection).
 
+use deckcraft_engine::tools::{Hit, box_handles};
+use deckcraft_engine::{Mods, PointerEvent, PointerKind, Target, ToolKind};
+use deckcraft_geom::{Point, Xfrm};
 use egui::{Align2, Color32, CornerRadius, Pos2, Rect, Sense, Stroke, Ui, pos2, vec2};
 use serde_json::json;
-use slidecraft_engine::tools::{Hit, box_handles};
-use slidecraft_engine::{Mods, PointerEvent, PointerKind, Target, ToolKind};
-use slidecraft_geom::{Point, Xfrm};
 
 use crate::SlideApp;
 use crate::theme::{self, Tokens};
@@ -201,16 +201,16 @@ fn media_bar(app: &mut SlideApp, ui: &mut Ui, xf: Xf) {
 
 fn master_tex(
     ctx: &egui::Context,
-    doc: &slidecraft_model::Presentation,
+    doc: &deckcraft_model::Presentation,
     master: usize,
     layout: Option<usize>,
     px: (u32, u32),
 ) -> Option<egui::TextureHandle> {
-    let img = slidecraft_render::render_layout(
+    let img = deckcraft_render::render_layout(
         doc,
         master,
         layout,
-        &slidecraft_render::RenderOpts { scale: px.0 as f64 / doc.slide_size.width.max(1.0), edit: true, size: Some(px), ..Default::default() },
+        &deckcraft_render::RenderOpts { scale: px.0 as f64 / doc.slide_size.width.max(1.0), edit: true, size: Some(px), ..Default::default() },
     );
     Some(ctx.load_texture("master-canvas", crate::textures::to_color_image(&img, false), egui::TextureOptions::LINEAR))
 }
@@ -327,13 +327,13 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
     let editing = st.selection.text.clone();
     for id in &st.selection.shapes {
         let Some(sh) = st.shape(*id) else { continue };
-        let x = slidecraft_engine::cmd::xfrm_of(&st.doc, &st.selection, sh);
+        let x = deckcraft_engine::cmd::xfrm_of(&st.doc, &st.selection, sh);
         let a = x.affine();
         let corners = [Point::new(0.0, 0.0), Point::new(x.w, 0.0), Point::new(x.w, x.h), Point::new(0.0, x.h)].map(|q| xf.to_screen(a * q));
         if sh.is_line() {
             let (p0, p1) = (xf.to_screen(a * Point::new(0.0, 0.0)), xf.to_screen(a * Point::new(x.w, x.h)));
             let glued = match sh.kind {
-                slidecraft_model::ShapeKind::Connector { start, end } => [start.is_some(), end.is_some()],
+                deckcraft_model::ShapeKind::Connector { start, end } => [start.is_some(), end.is_some()],
                 _ => [false, false],
             };
             for (q, g) in [p0, p1].into_iter().zip(glued) {
@@ -364,7 +364,7 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
             for h in hs {
                 painter.circle(xf.to_screen(h), 4.5, t.handle_fill, Stroke::new(1.0, t.handle_stroke));
             }
-            let geo = slidecraft_render::shape_geometry(sh, x.w, x.h);
+            let geo = deckcraft_render::shape_geometry(sh, x.w, x.h);
             for hd in &geo.handles {
                 let q = xf.to_screen(a * hd.pos);
                 painter.circle(q, 4.5, Color32::from_rgb(0xFF, 0xD2, 0x3F), Stroke::new(1.0, Color32::from_rgb(0x8A, 0x6A, 0x00)));
@@ -376,26 +376,26 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
         && !ts.notes
         && ts.cell.is_none()
         && let Some(sh) = st.shape(ts.shape)
-        && let Some(l) = slidecraft_engine::cmd::text::layout_for(st, ts)
+        && let Some(l) = deckcraft_engine::cmd::text::layout_for(st, ts)
     {
-        let x = slidecraft_engine::cmd::xfrm_of(&st.doc, &st.selection, sh);
+        let x = deckcraft_engine::cmd::xfrm_of(&st.doc, &st.selection, sh);
         let a = x.affine();
         let rot = if l.rotation != 0.0 {
             let c = l.inner.center().to_vec2();
-            slidecraft_geom::Affine::translate(c) * slidecraft_geom::Affine::rotate(l.rotation.to_radians()) * slidecraft_geom::Affine::translate(-c)
+            deckcraft_geom::Affine::translate(c) * deckcraft_geom::Affine::rotate(l.rotation.to_radians()) * deckcraft_geom::Affine::translate(-c)
         } else {
-            slidecraft_geom::Affine::IDENTITY
+            deckcraft_geom::Affine::IDENTITY
         };
         let m = a * rot;
         let (s0, s1) = ts.ordered();
-        for r in l.selection_rects(slidecraft_text::Pos { para: s0.0, ch: s0.1 }, slidecraft_text::Pos { para: s1.0, ch: s1.1 }) {
+        for r in l.selection_rects(deckcraft_text::Pos { para: s0.0, ch: s0.1 }, deckcraft_text::Pos { para: s1.0, ch: s1.1 }) {
             let pts = [Point::new(r.x0, r.y0), Point::new(r.x1, r.y0), Point::new(r.x1, r.y1), Point::new(r.x0, r.y1)].map(|q| xf.to_screen(m * q));
             painter.add(egui::Shape::convex_polygon(pts.to_vec(), t.text_selection, Stroke::NONE));
         }
         if !ts.is_range() {
             let blink = (ui.input(|i| i.time) * 1.6).fract() < 0.6;
             ui.ctx().request_repaint_after(std::time::Duration::from_millis(300));
-            if blink && let Some((cx, top, bot)) = l.caret(slidecraft_text::Pos { para: ts.caret.0, ch: ts.caret.1 }) {
+            if blink && let Some((cx, top, bot)) = l.caret(deckcraft_text::Pos { para: ts.caret.0, ch: ts.caret.1 }) {
                 let (p0, p1) = (xf.to_screen(m * Point::new(cx, top)), xf.to_screen(m * Point::new(cx, bot)));
                 painter.line_segment([p0, p1], Stroke::new(1.5, t.caret));
             }
@@ -404,9 +404,9 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
     // Table cell editing: outline the cell.
     if let Some(ts) = &editing
         && let (Some((r, c)), Some(sh)) = (ts.cell, st.shape(ts.shape))
-        && let slidecraft_model::ShapeKind::Table(tb) = &sh.kind
+        && let deckcraft_model::ShapeKind::Table(tb) = &sh.kind
     {
-        let x = slidecraft_engine::cmd::xfrm_of(&st.doc, &st.selection, sh);
+        let x = deckcraft_engine::cmd::xfrm_of(&st.doc, &st.selection, sh);
         let y0: f64 = tb.rows.iter().take(r).map(|rr| rr.height).sum();
         let x0: f64 = tb.cols.iter().take(c).sum();
         let (w, h) = (tb.cols.get(c).copied().unwrap_or(0.0), tb.rows.get(r).map(|rr| rr.height).unwrap_or(0.0));
@@ -437,11 +437,11 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
     let path = &app.session.tool.path_preview;
     if path.len() > 1 {
         let pts: Vec<Point> = if app.session.tool.path_smooth && path.len() > 2 {
-            let d = slidecraft_engine::cmd::shape::freeform_path(path, false, true);
+            let d = deckcraft_engine::cmd::shape::freeform_path(path, false, true);
             let mut v = vec![];
-            let bp = slidecraft_render::parse_path(&d);
-            slidecraft_geom::preset_flatten(&bp, &mut |el| match el {
-                slidecraft_geom::PathEl::MoveTo(q) | slidecraft_geom::PathEl::LineTo(q) => v.push(q),
+            let bp = deckcraft_render::parse_path(&d);
+            deckcraft_geom::preset_flatten(&bp, &mut |el| match el {
+                deckcraft_geom::PathEl::MoveTo(q) | deckcraft_geom::PathEl::LineTo(q) => v.push(q),
                 _ => {}
             });
             v
@@ -493,7 +493,7 @@ fn draw_preview(app: &SlideApp, p: &egui::Painter, xf: Xf, x: Xfrm, t: &Tokens) 
         ToolKind::Shape { preset } => preset.clone(),
         _ => "rect".into(),
     };
-    if slidecraft_geom::preset::is_line_like(&preset) {
+    if deckcraft_geom::preset::is_line_like(&preset) {
         let a = x.affine();
         p.line_segment([xf.to_screen(a * Point::new(0.0, 0.0)), xf.to_screen(a * Point::new(x.w, x.h))], Stroke::new(1.5, t.accent));
         return;

@@ -1,8 +1,8 @@
 //! Inheritance: effective position, fill, line, body and text properties of a shape, following
 //! slide → layout placeholder → master placeholder → master text styles → theme.
 
-use slidecraft_color::{ColorScheme, Rgba, SchemeSlot};
-use slidecraft_geom::Xfrm;
+use deckcraft_color::{ColorScheme, Rgba, SchemeSlot};
+use deckcraft_geom::Xfrm;
 
 use crate::style::{ColorRef, Effects, Fill, Line};
 use crate::text::{Anchor, AutoFit, BodyProps, LevelStyle, ListStyle, ParaProps, RunProps};

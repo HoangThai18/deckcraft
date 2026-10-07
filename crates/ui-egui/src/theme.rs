@@ -30,7 +30,7 @@ pub struct Tokens {
     pub hover: Color32,
     pub pressed: Color32,
     pub selected: Color32,
-    /// SlideCraft's accent (tabs underline, selected thumbnail, primary buttons).
+    /// DeckCraft's accent (tabs underline, selected thumbnail, primary buttons).
     pub accent: Color32,
     pub accent_text: Color32,
     pub contextual: Color32,
@@ -157,7 +157,7 @@ pub fn apply(ctx: &egui::Context, t: &Tokens) {
 pub fn install_fonts(ctx: &egui::Context) {
     let mut defs = FontDefinitions::default();
     let mut names = vec![];
-    for (i, f) in slidecraft_fonts::CRAFT_FONTS.iter().enumerate() {
+    for (i, f) in deckcraft_fonts::CRAFT_FONTS.iter().enumerate() {
         let wanted = (f.family == "Inter" && (f.style == "Regular" || f.style == "SemiBold" || f.style == "Bold"))
             || (f.family == "BIZ UDPGothic" && f.style == "Regular")
             || (f.family == "Noto Sans Arabic");
@@ -189,6 +189,6 @@ pub fn font(size: f32) -> egui::FontId {
     egui::FontId::proportional(size)
 }
 
-pub fn to_color32(c: slidecraft_color::Rgba) -> Color32 {
+pub fn to_color32(c: deckcraft_color::Rgba) -> Color32 {
     Color32::from_rgba_unmultiplied(c.r, c.g, c.b, c.a)
 }

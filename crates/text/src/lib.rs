@@ -10,12 +10,12 @@
 
 use std::sync::Arc;
 
-use slidecraft_color::Rgba;
-use slidecraft_fonts::{FontDb, FontFace};
-use slidecraft_geom::{Point, Rect};
-use slidecraft_model::resolve::{self, Ctx};
-use slidecraft_model::text::{Align, Anchor, AutoFit, BodyProps, Bullet, Caps, ParaProps, RunKind, RunProps, Spacing, Strike, TextBody, TextDir};
-use slidecraft_model::{Fill, Shape};
+use deckcraft_color::Rgba;
+use deckcraft_fonts::{FontDb, FontFace};
+use deckcraft_geom::{Point, Rect};
+use deckcraft_model::resolve::{self, Ctx};
+use deckcraft_model::text::{Align, Anchor, AutoFit, BodyProps, Bullet, Caps, ParaProps, RunKind, RunProps, Spacing, Strike, TextBody, TextDir};
+use deckcraft_model::{Fill, Shape};
 
 /// A run of glyphs in one face, size and colour.
 #[derive(Clone)]
@@ -37,7 +37,7 @@ pub struct GlyphRun {
     pub link: bool,
     /// Alpha of the fill (0–1).
     pub alpha: f64,
-    pub gradient: Option<slidecraft_model::style::Gradient>,
+    pub gradient: Option<deckcraft_model::style::Gradient>,
 }
 
 impl std::fmt::Debug for GlyphRun {
@@ -130,7 +130,7 @@ struct Style {
     highlight: Option<Rgba>,
     outline: Option<(Rgba, f64)>,
     link: bool,
-    gradient: Option<slidecraft_model::style::Gradient>,
+    gradient: Option<deckcraft_model::style::Gradient>,
 }
 
 /// One shaped character cell of a paragraph.
@@ -357,7 +357,7 @@ fn shape_para(ctx: &Ctx, shape: &Shape, body: &TextBody, pi: usize, scale: f64, 
             let fi = face_index(&mut faces, &face);
             let upem = face.upem.max(1.0);
             let sz = |ch: char| if small && ch.is_lowercase() { stl.size * 0.8 } else { stl.size };
-            let shaped = slidecraft_fonts::shape(&face, &seg, &[], |ch| if upper { ch.to_uppercase().next().unwrap_or(ch) } else { ch });
+            let shaped = deckcraft_fonts::shape(&face, &seg, &[], |ch| if upper { ch.to_uppercase().next().unwrap_or(ch) } else { ch });
             // byte offset → char index within seg
             let mut byte_to_char = vec![0usize; seg.len() + 1];
             for (ci, (b, _)) in seg.char_indices().enumerate() {
@@ -461,7 +461,7 @@ fn map_symbol_bullet(c: &str, font: Option<&str>) -> String {
 }
 
 fn measure_str(face: &FontFace, size: f64, s: &str) -> (f64, Vec<(u32, f64)>) {
-    let g = slidecraft_fonts::shape(face, s, &[], |c| c);
+    let g = deckcraft_fonts::shape(face, s, &[], |c| c);
     let k = size / face.upem.max(1.0);
     let mut x = 0.0;
     let mut out = vec![];

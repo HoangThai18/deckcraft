@@ -1,8 +1,8 @@
 //! Arrange: order, group, align, distribute, rotate and flip.
 
+use deckcraft_geom::{Point, Rect, Xfrm};
+use deckcraft_model::{Shape, ShapeId, ShapeKind};
 use serde_json::{Value, json};
-use slidecraft_geom::{Point, Rect, Xfrm};
-use slidecraft_model::{Shape, ShapeId, ShapeKind};
 
 use super::*;
 use crate::{Result, Session};
@@ -145,7 +145,7 @@ fn group(s: &mut Session, p: &Value) -> Result<Value> {
 pub(crate) fn child_to_parent(group: &Xfrm, ch: &Xfrm, c: &Xfrm) -> Xfrm {
     let sx = if ch.w.abs() > 1e-9 { group.w / ch.w } else { 1.0 };
     let sy = if ch.h.abs() > 1e-9 { group.h / ch.h } else { 1.0 };
-    let a = slidecraft_geom::group_child_affine(group, Rect::new(ch.x, ch.y, ch.x + ch.w, ch.y + ch.h));
+    let a = deckcraft_geom::group_child_affine(group, Rect::new(ch.x, ch.y, ch.x + ch.w, ch.y + ch.h));
     let center = a * Point::new(c.x + c.w / 2.0, c.y + c.h / 2.0);
     let (w, h) = (c.w * sx.abs(), c.h * sy.abs());
     let mut rot = c.rot + group.rot;

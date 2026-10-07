@@ -2,11 +2,11 @@
 
 use std::sync::Arc;
 
+use deckcraft_model::edit::{self as ed, Pos};
+use deckcraft_model::resolve::{self, Ctx};
+use deckcraft_model::text::{AutoFit, Run, RunKind, RunProps, TextBody};
+use deckcraft_model::{Presentation, ShapeId, ShapeKind};
 use serde_json::{Value, json};
-use slidecraft_model::edit::{self as ed, Pos};
-use slidecraft_model::resolve::{self, Ctx};
-use slidecraft_model::text::{AutoFit, Run, RunKind, RunProps, TextBody};
-use slidecraft_model::{Presentation, ShapeId, ShapeKind};
 
 use super::*;
 use crate::{DocState, Result, Selection, Session, Target, TextSel};
@@ -52,7 +52,7 @@ fn body_mut<'a>(doc: &'a mut Presentation, sel: &Selection, t: &TextSel) -> Opti
         return doc.slides.get_mut(sel.slide).map(|s| &mut Arc::make_mut(s).notes);
     }
     let shapes = crate::shapes_mut(doc, sel)?;
-    let sh = slidecraft_model::find_shape_mut(shapes, t.shape)?;
+    let sh = deckcraft_model::find_shape_mut(shapes, t.shape)?;
     if let Some((r, c)) = t.cell {
         if let ShapeKind::Table(tb) = &mut sh.kind {
             return tb.cell_mut(r, c).map(|x| &mut x.text);
@@ -92,14 +92,14 @@ pub fn fit_text_box(s: &mut Session, id: ShapeId) -> Result<()> {
         return Ok(());
     }
     let x = xfrm_of(&doc, &sel, &sh);
-    let geo = slidecraft_render::shape_geometry(&sh, x.w, x.h);
-    let fields = slidecraft_text::NoFields;
+    let geo = deckcraft_render::shape_geometry(&sh, x.w, x.h);
+    let fields = deckcraft_text::NoFields;
     let mut nx = x;
     if bp.wrap == Some(false) {
-        nx.w = slidecraft_text::fit_width(&ctx, &sh, &body, geo.text_rect, &fields).max(20.0);
+        nx.w = deckcraft_text::fit_width(&ctx, &sh, &body, geo.text_rect, &fields).max(20.0);
     }
-    let geo = slidecraft_render::shape_geometry(&sh, nx.w, nx.h);
-    let need = slidecraft_text::fit_height(&ctx, &sh, &body, geo.text_rect, &fields);
+    let geo = deckcraft_render::shape_geometry(&sh, nx.w, nx.h);
+    let need = deckcraft_text::fit_height(&ctx, &sh, &body, geo.text_rect, &fields);
     let extra = (nx.h - geo.text_rect.height()).max(0.0);
     nx.h = (need + extra).max(8.0);
     if (nx.h - x.h).abs() < 0.01 && (nx.w - x.w).abs() < 0.01 && sh.xfrm.is_some() {
@@ -109,7 +109,7 @@ pub fn fit_text_box(s: &mut Session, id: ShapeId) -> Result<()> {
     let st = s.doc_mut()?;
     let mut d = (*st.doc).clone();
     if let Some(list) = crate::shapes_mut(&mut d, &st.selection)
-        && let Some(target) = slidecraft_model::find_shape_mut(list, id)
+        && let Some(target) = deckcraft_model::find_shape_mut(list, id)
     {
         target.xfrm = Some(nx);
     }
@@ -127,7 +127,7 @@ pub(crate) fn ctx_for<'a>(doc: &'a Presentation, sel: &Selection) -> Option<Ctx<
 }
 
 /// Lay out the text being edited (for vertical caret movement and hit testing).
-pub fn layout_for(st: &DocState, t: &TextSel) -> Option<slidecraft_text::TextLayout> {
+pub fn layout_for(st: &DocState, t: &TextSel) -> Option<deckcraft_text::TextLayout> {
     if t.notes || t.cell.is_some() {
         return None;
     }
@@ -135,12 +135,12 @@ pub fn layout_for(st: &DocState, t: &TextSel) -> Option<slidecraft_text::TextLay
     let body = sh.text.as_ref()?;
     let ctx = ctx_for(&st.doc, &st.selection)?;
     let x = xfrm_of(&st.doc, &st.selection, sh);
-    let geo = slidecraft_render::shape_geometry(sh, x.w, x.h);
-    Some(slidecraft_text::layout(
+    let geo = deckcraft_render::shape_geometry(sh, x.w, x.h);
+    Some(deckcraft_text::layout(
         &ctx,
         sh,
         body,
-        &slidecraft_text::Opts { rect: geo.text_rect, fields: &slidecraft_text::NoFields, prompt_color: None, no_shrink: false },
+        &deckcraft_text::Opts { rect: geo.text_rect, fields: &deckcraft_text::NoFields, prompt_color: None, no_shrink: false },
     ))
 }
 
@@ -175,7 +175,7 @@ fn edit(s: &mut Session, p: &Value) -> Result<Value> {
     if sh.text.is_none() && cell.is_none() {
         s.edit(|doc, sel| {
             if let Some(list) = crate::shapes_mut(doc, sel)
-                && let Some(x) = slidecraft_model::find_shape_mut(list, id)
+                && let Some(x) = deckcraft_model::find_shape_mut(list, id)
             {
                 x.text = Some(TextBody::default());
             }
@@ -313,7 +313,7 @@ pub(crate) fn insert_field(s: &mut Session, field: &str, text: &str) -> Result<V
         let at = ed::delete(body, a, b);
         let props = ed::props_at(body, at);
         let src = TextBody {
-            paragraphs: vec![slidecraft_model::text::Paragraph {
+            paragraphs: vec![deckcraft_model::text::Paragraph {
                 runs: vec![Run { text: text.clone(), props, kind: RunKind::Field { field: field.clone() } }],
                 ..Default::default()
             }],
@@ -375,7 +375,7 @@ fn move_caret(s: &mut Session, p: &Value) -> Result<Value> {
     let t = st.selection.text.clone().ok_or_else(|| bad("text.move", "not editing text"))?;
     let body = body_of(st, &t).cloned().unwrap_or_default();
     let layout = layout_for(st, &t);
-    let lp = |c: Pos| slidecraft_text::Pos { para: c.0, ch: c.1 };
+    let lp = |c: Pos| deckcraft_text::Pos { para: c.0, ch: c.1 };
     let caret = t.caret;
     let collapse_to = |left: bool| if left { t.ordered().0 } else { t.ordered().1 };
     let new = match to.as_str() {
@@ -490,7 +490,7 @@ fn set(s: &mut Session, p: &Value) -> Result<Value> {
         };
         let Some(body) = target else { return Err(bad("text.set", "no text here (tables need `cell`)")) };
         let keep = body.paragraphs.first().and_then(|p| p.runs.first()).map(|r| r.props.clone()).unwrap_or_default();
-        let levels: Vec<(u8, slidecraft_model::text::ParaProps)> = body.paragraphs.iter().map(|p| (p.level, p.props.clone())).collect();
+        let levels: Vec<(u8, deckcraft_model::text::ParaProps)> = body.paragraphs.iter().map(|p| (p.level, p.props.clone())).collect();
         let mut nb = TextBody::from_text(&text);
         for (i, para) in nb.paragraphs.iter_mut().enumerate() {
             // Leading tabs set the outline level.
@@ -593,7 +593,7 @@ pub(crate) fn format_run(s: &mut Session, f: &(dyn Fn(&mut RunProps) + Send + Sy
 
 /// Apply paragraph changes to the paragraphs touched by the selection (or all paragraphs of the
 /// selected shapes).
-pub(crate) fn format_para(s: &mut Session, f: &(dyn Fn(&mut slidecraft_model::text::Paragraph) + Send + Sync)) -> Result<Value> {
+pub(crate) fn format_para(s: &mut Session, f: &(dyn Fn(&mut deckcraft_model::text::Paragraph) + Send + Sync)) -> Result<Value> {
     let st = s.doc()?;
     if let Some(t) = st.selection.text.clone() {
         let (a, b) = t.ordered();
@@ -639,7 +639,7 @@ pub(crate) fn format_para(s: &mut Session, f: &(dyn Fn(&mut slidecraft_model::te
 }
 
 /// Apply body (text box) changes to the edited or selected shapes.
-pub(crate) fn format_body(s: &mut Session, f: &(dyn Fn(&mut slidecraft_model::text::BodyProps) + Send + Sync)) -> Result<Value> {
+pub(crate) fn format_body(s: &mut Session, f: &(dyn Fn(&mut deckcraft_model::text::BodyProps) + Send + Sync)) -> Result<Value> {
     let st = s.doc()?;
     let ids: Vec<ShapeId> = match &st.selection.text {
         Some(t) if !t.notes => vec![t.shape],

@@ -1,7 +1,7 @@
 //! Chart parts (`c:chartSpace`) → [`Chart`]. The original XML is kept in `Chart.raw`.
 
-use slidecraft_model::chart::{Chart, ChartType, Series};
-use slidecraft_model::style::Fill;
+use deckcraft_model::chart::{Chart, ChartType, Series};
+use deckcraft_model::style::Fill;
 
 use crate::xml::El;
 
@@ -19,9 +19,9 @@ fn simple_fill(sp: Option<&El>) -> Option<Fill> {
     None
 }
 
-fn simple_line(sp: Option<&El>) -> Option<slidecraft_model::Line> {
+fn simple_line(sp: Option<&El>) -> Option<deckcraft_model::Line> {
     let ln = sp?.child("ln")?;
-    let mut l = slidecraft_model::Line { width: super::dml::pt(ln, "w"), ..Default::default() };
+    let mut l = deckcraft_model::Line { width: super::dml::pt(ln, "w"), ..Default::default() };
     l.fill = simple_fill(Some(ln));
     Some(l)
 }

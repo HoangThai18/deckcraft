@@ -1,4 +1,4 @@
-//! The SlideCraft engine façade.
+//! The DeckCraft engine façade.
 //!
 //! Every user-visible action is a command with a stable id (`slide.new`, `shape.insert`,
 //! `text.insert`, `format.bold`…) and JSON parameters. The egui UI, the CLI, the control channel
@@ -18,15 +18,15 @@ pub mod tools;
 
 use std::sync::Arc;
 
+use deckcraft_model::{Presentation, Shape, ShapeId, Slide, SlideId};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use slidecraft_model::{Presentation, Shape, ShapeId, Slide, SlideId};
 
 pub use cmd::{CommandInfo, CommandSpec, command_specs, find_command};
-pub use slidecraft_geom as geom;
-pub use slidecraft_media as media;
-pub use slidecraft_model as model;
-pub use slidecraft_render as render;
+pub use deckcraft_geom as geom;
+pub use deckcraft_media as media;
+pub use deckcraft_model as model;
+pub use deckcraft_render as render;
 pub use tools::{Mods, PointerEvent, PointerKind, ToolKind};
 
 #[derive(Debug, thiserror::Error)]
@@ -45,8 +45,8 @@ pub enum EngineError {
     Internal(String, String),
 }
 
-impl From<slidecraft_model::ModelError> for EngineError {
-    fn from(e: slidecraft_model::ModelError) -> Self {
+impl From<deckcraft_model::ModelError> for EngineError {
+    fn from(e: deckcraft_model::ModelError) -> Self {
         EngineError::Other(e.to_string())
     }
 }
@@ -184,7 +184,7 @@ impl DocState {
         }
     }
     pub fn shape(&self, id: ShapeId) -> Option<&Shape> {
-        slidecraft_model::find_shape(self.shapes(), id)
+        deckcraft_model::find_shape(self.shapes(), id)
     }
     pub fn selected_shapes(&self) -> Vec<&Shape> {
         self.selection.shapes.iter().filter_map(|id| self.shape(*id)).collect()
@@ -282,8 +282,8 @@ pub struct Clipboard {
     pub shapes: Vec<Shape>,
     pub slides: Vec<Slide>,
     /// Media the copied shapes/slides reference.
-    pub media: Vec<slidecraft_model::MediaItem>,
-    pub text: Option<slidecraft_model::TextBody>,
+    pub media: Vec<deckcraft_model::MediaItem>,
+    pub text: Option<deckcraft_model::TextBody>,
     pub plain: String,
     /// How many times the shapes were pasted (each paste offsets further).
     pub pastes: u32,

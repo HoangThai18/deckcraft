@@ -2,17 +2,17 @@
 <!-- AppStream metadata (software centres, Flathub). Template: package.sh and the Flatpak
      manifest substitute @VERSION@ and @DATE@ from Cargo.toml and the build date. -->
 <component type="desktop-application">
-  <id>ai.storyteller.slidecraft</id>
+  <id>ai.storyteller.deckcraft</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT OR Apache-2.0</project_license>
-  <name>SlideCraft</name>
+  <name>DeckCraft</name>
   <summary>Create and present slide decks</summary>
   <developer id="ai.storyteller">
     <name>Learning Machines LLC</name>
   </developer>
   <description>
     <p>
-      SlideCraft builds presentations and slide shows: themes, layouts, shapes, pictures,
+      DeckCraft builds presentations and slide shows: themes, layouts, shapes, pictures,
       tables, charts, transitions and animations. It opens and saves PowerPoint (.pptx) files
       and presents them full screen with a presenter view.
     </p>
@@ -20,12 +20,12 @@
       Every action is also a command that the command line and AI agents (through MCP) can drive.
     </p>
   </description>
-  <launchable type="desktop-id">ai.storyteller.slidecraft.desktop</launchable>
-  <icon type="stock">ai.storyteller.slidecraft</icon>
+  <launchable type="desktop-id">ai.storyteller.deckcraft.desktop</launchable>
+  <icon type="stock">ai.storyteller.deckcraft</icon>
   <!-- Only url types known to appstream 0.15 (Ubuntu 22.04, where CI validates): no vcs-browser. -->
-  <url type="homepage">https://getartcraft.com/apps/slidecraft</url>
-  <url type="bugtracker">https://github.com/storytold/slidecraft/issues</url>
-  <url type="help">https://github.com/storytold/slidecraft</url>
+  <url type="homepage">https://getartcraft.com/apps/deckcraft</url>
+  <url type="bugtracker">https://github.com/storytold/deckcraft/issues</url>
+  <url type="help">https://github.com/storytold/deckcraft</url>
   <url type="contact">https://discord.gg/artcraft</url>
   <categories>
     <category>Office</category>
@@ -49,8 +49,8 @@
     <control>pointing</control>
   </supports>
   <provides>
-    <binary>slidecraft</binary>
-    <mediatype>application/x-slidecraft</mediatype>
+    <binary>deckcraft</binary>
+    <mediatype>application/x-deckcraft</mediatype>
   </provides>
   <content_rating type="oars-1.1"/>
   <releases>

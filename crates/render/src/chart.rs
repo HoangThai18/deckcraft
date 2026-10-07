@@ -1,12 +1,12 @@
 //! Charts: title, plot area with axes and gridlines, series marks, legend.
 
+use deckcraft_color::{ColorTransform, Rgba, SchemeSlot};
+use deckcraft_model::Shape;
+use deckcraft_model::chart::{Chart, ChartType, nice_scale};
+use deckcraft_model::resolve::Ctx;
+use deckcraft_model::style::{ColorRef, Fill};
+use deckcraft_model::text::{Align, Anchor, Bullet, TextBody};
 use kurbo::{Affine, BezPath, Point, Rect, Shape as _};
-use slidecraft_color::{ColorTransform, Rgba, SchemeSlot};
-use slidecraft_model::Shape;
-use slidecraft_model::chart::{Chart, ChartType, nice_scale};
-use slidecraft_model::resolve::Ctx;
-use slidecraft_model::style::{ColorRef, Fill};
-use slidecraft_model::text::{Align, Anchor, Bullet, TextBody};
 use vello_cpu::RenderContext;
 
 use crate::color;
@@ -23,13 +23,13 @@ pub fn series_color(ctx: &Ctx, c: &Chart, i: usize) -> Rgba {
     let round = if mono { i } else { i / 6 };
     match round {
         0 => base,
-        1 => slidecraft_color::apply(base, &[ColorTransform::Shade(60000)]),
-        2 => slidecraft_color::apply(base, &[ColorTransform::Tint(60000)]),
-        n => slidecraft_color::apply(base, &[ColorTransform::LumMod(100000 - (n as i32 % 5) * 12000)]),
+        1 => deckcraft_color::apply(base, &[ColorTransform::Shade(60000)]),
+        2 => deckcraft_color::apply(base, &[ColorTransform::Tint(60000)]),
+        n => deckcraft_color::apply(base, &[ColorTransform::LumMod(100000 - (n as i32 % 5) * 12000)]),
     }
 }
 
-fn series_fill(ctx: &Ctx, c: &Chart, i: usize, s: Option<&slidecraft_model::chart::Series>) -> Rgba {
+fn series_fill(ctx: &Ctx, c: &Chart, i: usize, s: Option<&deckcraft_model::chart::Series>) -> Rgba {
     match s.and_then(|s| s.fill.as_ref()) {
         Some(Fill::Solid { color: cc }) => ctx.color(cc, None),
         _ => series_color(ctx, c, i),
@@ -56,7 +56,7 @@ fn label(ctx: &mut RenderContext, rctx: &Ctx, m: Affine, text: &str, r: Rect, si
         }
     }
     let tmp = Shape { text: Some(body.clone()), ..Default::default() };
-    crate::draw_text(ctx, rctx, &tmp, &body, r, m, &slidecraft_text::NoFields, None);
+    crate::draw_text(ctx, rctx, &tmp, &body, r, m, &deckcraft_text::NoFields, None);
 }
 
 fn fmt_num(v: f64) -> String {
@@ -75,7 +75,7 @@ pub fn draw(ctx: &mut RenderContext, rctx: &Ctx, c: &Chart, m: Affine, w: f64, h
             &Rect::new(0.0, 0.0, w, h).to_path(0.1),
             Rect::new(0.0, 0.0, w, h),
             m,
-            slidecraft_geom::preset::FillMode::Norm,
+            deckcraft_geom::preset::FillMode::Norm,
             1.0,
             rctx.pres,
         );
@@ -173,7 +173,7 @@ pub fn draw(ctx: &mut RenderContext, rctx: &Ctx, c: &Chart, m: Affine, w: f64, h
         Rect::new(area.x0 + gutter, area.y0, area.x1, area.y1 - base * 1.8)
     };
     if let Some(f) = &c.plot_fill {
-        crate::paint::fill_path(ctx, rctx, f, None, &plot.to_path(0.1), plot, m, slidecraft_geom::preset::FillMode::Norm, 1.0, rctx.pres);
+        crate::paint::fill_path(ctx, rctx, f, None, &plot.to_path(0.1), plot, m, deckcraft_geom::preset::FillMode::Norm, 1.0, rctx.pres);
     }
     let span = (max - min).max(1e-9);
     let to_v = |v: f64| if horiz { plot.x0 + (v - min) / span * plot.width() } else { plot.y1 - (v - min) / span * plot.height() };

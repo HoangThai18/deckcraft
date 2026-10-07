@@ -1,9 +1,9 @@
 [package]
-name = "slidecraft-fonts"
+name = "deckcraft-fonts"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "SlideCraft fonts: font database (craft-fonts + system), substitutes for Office fonts, metrics, outlines, shaping"
+description = "DeckCraft fonts: font database (craft-fonts + system), substitutes for Office fonts, metrics, outlines, shaping"
 
 [lints]
 workspace = true

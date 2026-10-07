@@ -196,7 +196,7 @@ fn scale_rect(r: R, s: f64) -> R {
 
 // ---------- effects ----------
 
-/// Layers of the transition `kind` (a [`slidecraft_model::anim::TRANSITIONS`] id) with `option` at
+/// Layers of the transition `kind` (a [`deckcraft_model::anim::TRANSITIONS`] id) with `option` at
 /// progress `t` (0..1). Draw in order over black. At `t >= 1` the result is the new slide alone;
 /// at `t <= 0` (or NaN) the old slide alone. Morph returns a plain crossfade (the UI renders morph
 /// frames with [`crate::morph_pairs`]).
@@ -736,7 +736,7 @@ fn layers(kind: &str, option: &str, t: f64, depth: u32) -> Vec<Layer> {
         "random" if depth == 0 => {
             let h = option.bytes().fold(0x51ED_u64, |h, b| hash64(h ^ b as u64));
             let k = RANDOM_KINDS.get((h % RANDOM_KINDS.len() as u64) as usize).copied().unwrap_or("fade");
-            let opt = slidecraft_model::anim::TRANSITIONS.iter().find(|x| x.0 == k).and_then(|x| x.4.first().copied()).unwrap_or("");
+            let opt = deckcraft_model::anim::TRANSITIONS.iter().find(|x| x.0 == k).and_then(|x| x.4.first().copied()).unwrap_or("");
             layers(k, opt, t, depth + 1)
         }
         _ => crossfade(t),

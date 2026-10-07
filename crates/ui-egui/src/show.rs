@@ -1,11 +1,11 @@
-//! Slide Show: full-screen playback with transitions and animations (`slidecraft-anim`),
+//! Slide Show: full-screen playback with transitions and animations (`deckcraft-anim`),
 //! keyboard/mouse navigation, pen, black/white screens, presenter view and rehearsed timings.
 
+use deckcraft_anim::{Layer, ShowAction, ShowState, Source, Timeline};
+use deckcraft_model::{Presentation, ShapeId};
+use deckcraft_render::{ParaState, RenderOpts, ShapeState};
 use egui::{Align2, Color32, CornerRadius, Mesh, Pos2, Rect, Sense, Stroke, TextureHandle, Ui, pos2, vec2};
 use serde_json::json;
-use slidecraft_anim::{Layer, ShowAction, ShowState, Source, Timeline};
-use slidecraft_model::{Presentation, ShapeId};
-use slidecraft_render::{ParaState, RenderOpts, ShapeState};
 
 use crate::SlideApp;
 use crate::theme;
@@ -162,7 +162,7 @@ fn state_for(tl: &Timeline, id: ShapeId, step: usize, t: f64) -> ShapeState {
     ShapeState {
         visible: a.visible,
         opacity: a.opacity,
-        offset: slidecraft_geom::Vec2::new(a.offset_x, a.offset_y),
+        offset: deckcraft_geom::Vec2::new(a.offset_x, a.offset_y),
         scale: (a.scale_x, a.scale_y),
         rotate: a.rotate,
         clip: a.clip,
@@ -172,7 +172,7 @@ fn state_for(tl: &Timeline, id: ShapeId, step: usize, t: f64) -> ShapeState {
             .into_iter()
             .map(|p| {
                 let a = tl.state(id, Some(p), step, t);
-                (p, ParaState { visible: a.visible, opacity: a.opacity, offset: slidecraft_geom::Vec2::new(a.offset_x, a.offset_y) })
+                (p, ParaState { visible: a.visible, opacity: a.opacity, offset: deckcraft_geom::Vec2::new(a.offset_x, a.offset_y) })
             })
             .collect(),
     }
@@ -341,7 +341,7 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
         let hidden: Vec<ShapeId> = media
             .iter()
             .filter(|(id, _, clip)| {
-                clip.hide_while_not_playing && !app.media.status(*id).is_some_and(|s| s.state != slidecraft_media::PlayState::Ended)
+                clip.hide_while_not_playing && !app.media.status(*id).is_some_and(|s| s.state != deckcraft_media::PlayState::Ended)
             })
             .map(|m| m.0)
             .collect();
@@ -360,7 +360,7 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
             };
             let threads =
                 if cfg!(target_arch = "wasm32") { 0 } else { std::thread::available_parallelism().map(|n| n.get().min(8) as u16).unwrap_or(0) };
-            let img = slidecraft_render::render_slide(
+            let img = deckcraft_render::render_slide(
                 &doc,
                 idx,
                 &RenderOpts {
@@ -386,7 +386,7 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
         if let (Some(tr), Some(new)) = (&show.trans, &tex) {
             let p = ((now - tr.start) / tr.dur.max(0.01)).clamp(0.0, 1.0);
             if p < 1.0 {
-                for l in slidecraft_anim::transition_layers(&tr.kind, &tr.option, p) {
+                for l in deckcraft_anim::transition_layers(&tr.kind, &tr.option, p) {
                     let mesh = match l.source {
                         Source::Old => match &tr.old {
                             Some(o) => quad_mesh(Some(o.id()), srect, &l, Color32::WHITE),
@@ -572,7 +572,7 @@ fn show_media(app: &mut SlideApp, show: &mut Show, doc: &Presentation) {
 }
 
 /// The media shape under the pointer on the shown slide.
-fn media_hit(ctx: &egui::Context, ui: &Ui, show: &Show, doc: &Presentation) -> Option<(ShapeId, slidecraft_model::MediaClip)> {
+fn media_hit(ctx: &egui::Context, ui: &Ui, show: &Show, doc: &Presentation) -> Option<(ShapeId, deckcraft_model::MediaClip)> {
     let p = ctx.input(|i| i.pointer.interact_pos())?;
     let full = ui.max_rect();
     let avail = if show.reading { Rect::from_min_max(full.min, pos2(full.max.x, full.max.y - 34.0)) } else { full };
@@ -596,12 +596,12 @@ impl Show {
 
 fn presenter_window(ctx: &egui::Context, show: &mut Show, doc: &Presentation, now: f64, keep: &mut bool) {
     let cur = show.state.slide;
-    let next = slidecraft_anim::show_order(doc).into_iter().find(|i| *i > cur);
+    let next = deckcraft_anim::show_order(doc).into_iter().find(|i| *i > cur);
     let cur_tex = show.tex.as_ref().map(|(_, t)| t.clone());
     if let Some(n) = next
         && show.next_tex.as_ref().is_none_or(|(k, _)| *k != n)
     {
-        let img = slidecraft_render::render_slide(
+        let img = deckcraft_render::render_slide(
             doc,
             n,
             &RenderOpts {
@@ -617,8 +617,8 @@ fn presenter_window(ctx: &egui::Context, show: &mut Show, doc: &Presentation, no
     let elapsed = now - show.show_start;
     let mut actions = vec![];
     ctx.show_viewport_immediate(
-        egui::ViewportId::from_hash_of("slidecraft_presenter"),
-        egui::ViewportBuilder::default().with_title("Presenter View — SlideCraft").with_inner_size([1100.0, 700.0]),
+        egui::ViewportId::from_hash_of("deckcraft_presenter"),
+        egui::ViewportBuilder::default().with_title("Presenter View — DeckCraft").with_inner_size([1100.0, 700.0]),
         |ui, _| {
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(Color32::from_gray(24)).inner_margin(egui::Margin::same(16))).show(ui, |ui| {
                 ui.horizontal(|ui| {

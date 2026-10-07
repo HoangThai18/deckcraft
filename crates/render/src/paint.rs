@@ -1,11 +1,11 @@
 //! Fills: solid, gradient, picture and pattern paints.
 
+use deckcraft_color::Rgba;
+use deckcraft_geom::preset::FillMode;
+use deckcraft_model::resolve::Ctx;
+use deckcraft_model::style::{Fill, GradientShape, PictureFill, PictureMode};
+use deckcraft_model::{PhType, Presentation};
 use kurbo::{Affine, BezPath, Point, Rect, Shape as _};
-use slidecraft_color::Rgba;
-use slidecraft_geom::preset::FillMode;
-use slidecraft_model::resolve::Ctx;
-use slidecraft_model::style::{Fill, GradientShape, PictureFill, PictureMode};
-use slidecraft_model::{PhType, Presentation};
 use vello_cpu::{RenderContext, peniko};
 
 use crate::{color, images, shade};

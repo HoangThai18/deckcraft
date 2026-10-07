@@ -1,4 +1,4 @@
-//! SlideCraft's egui frontend: a PowerPoint-style UI over `slidecraft-engine`.
+//! DeckCraft's egui frontend: a PowerPoint-style UI over `deckcraft-engine`.
 //!
 //! The UI is thin: every action goes through [`SlideApp::run`], which handles UI commands
 //! (views, panes, zoom) here and sends everything else to the engine. The ribbon, menus,
@@ -25,9 +25,9 @@ pub mod widgets;
 
 use std::sync::mpsc::{Receiver, Sender};
 
+use deckcraft_engine::{Mods, Session, UiRequest};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use slidecraft_engine::{Mods, Session, UiRequest};
 
 pub use control::{ControlRequest, ControlResponse};
 
@@ -56,7 +56,7 @@ pub struct Services {
     /// Image on the system clipboard (PNG bytes), when the host can read one.
     pub clipboard_image: Option<Box<dyn FnMut() -> Option<Vec<u8>>>>,
     /// Audio output for media playback (cpal on desktop); without one media plays silently.
-    pub audio_out: Option<Box<dyn slidecraft_media::AudioOut>>,
+    pub audio_out: Option<Box<dyn deckcraft_media::AudioOut>>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -149,7 +149,7 @@ pub const UI_COMMANDS: &[(&str, &str, Option<&str>, &str)] = &[
     ("show.start", "Slide Show", Some("F5"), "{from?: index}"),
     ("show.presenter", "Presenter View", None, "{on?: bool}"),
     ("show.end", "End Show", None, "{}"),
-    ("app.about", "About SlideCraft", None, "{}"),
+    ("app.about", "About DeckCraft", None, "{}"),
     ("app.palette", "Command Palette", Some("Cmd+Shift+P"), "{}"),
     ("app.preferences", "Preferences…", Some("Cmd+,"), "{}"),
     ("app.openDialog", "Open…", None, "{purpose?}"),
@@ -331,14 +331,14 @@ impl SlideApp {
             "app.insertPictureDialog" => self.pick_and_insert("picture", "insert.picture"),
             "app.insertAudioDialog" => self.pick_and_insert("audio", "insert.audio"),
             "app.insertVideoDialog" => self.pick_and_insert("video", "insert.video"),
-            "app.saveAsDialog" => self.save_as_dialog("slidecraft"),
+            "app.saveAsDialog" => self.save_as_dialog("deckcraft"),
             "app.exportDialog" => self.dialog = Some(dialogs::Dialog::new("export")),
             "app.dialog" => {
                 let d = p.get("id").and_then(Value::as_str).ok_or("missing `id`")?;
                 self.dialog = Some(dialogs::Dialog::new(d));
             }
             "app.links" => {
-                use slidecraft_engine::links::*;
+                use deckcraft_engine::links::*;
                 return Ok(json!({"discord": DISCORD, "website": WEBSITE, "apps": APPS, "appPage": APP_PAGE, "github": GITHUB}));
             }
             _ => return Err(format!("unknown UI command `{id}`")),
@@ -378,7 +378,7 @@ impl SlideApp {
                 let r = match self.services.read.as_ref().map(|r| r(&path)) {
                     Some(Ok(bytes)) => {
                         let name = std::path::Path::new(&path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                        self.session.execute(cmd, &json!({"name": name, "data": slidecraft_engine::cmd::base64_encode(&bytes)}))
+                        self.session.execute(cmd, &json!({"name": name, "data": deckcraft_engine::cmd::base64_encode(&bytes)}))
                     }
                     _ => self.session.execute(cmd, &json!({"path": path})),
                 };
@@ -393,7 +393,7 @@ impl SlideApp {
 
     pub fn save_as_dialog(&mut self, format: &str) {
         let name = self.session.active().map(|d| d.title()).unwrap_or_else(|| "Presentation".into());
-        let ext = if format == "pptx" { "pptx" } else { "slidecraft" };
+        let ext = if format == "pptx" { "pptx" } else { "deckcraft" };
         let suggested = format!("{name}.{ext}");
         if let Some(pick) = self.services.pick_save.as_mut() {
             if let Some(path) = pick(&suggested) {
@@ -409,7 +409,7 @@ impl SlideApp {
         } else if let Some(dl) = self.services.download.as_mut()
             && let Some(d) = self.session.active()
         {
-            match slidecraft_engine::cmd::file::save_bytes(&d.doc, ext) {
+            match deckcraft_engine::cmd::file::save_bytes(&d.doc, ext) {
                 Ok(bytes) => dl(&suggested, &bytes),
                 Err(e) => self.set_status(e.to_string()),
             }
@@ -437,7 +437,7 @@ impl SlideApp {
                 Err(e) => self.set_status(e.to_string()),
             }
         } else {
-            self.save_as_dialog("slidecraft");
+            self.save_as_dialog("deckcraft");
         }
     }
 
@@ -455,7 +455,7 @@ impl SlideApp {
                 UiRequest::Message { text } => self.set_status(text),
                 UiRequest::PickFile { purpose } => {
                     if purpose == "saveAs" {
-                        self.save_as_dialog("slidecraft");
+                        self.save_as_dialog("deckcraft");
                     }
                 }
                 UiRequest::Media { action, shape, ms } => {
@@ -479,9 +479,14 @@ impl SlideApp {
     /// A dropped or picked file: presentations open, media is inserted.
     pub fn open_or_insert_bytes(&mut self, name: &str, bytes: &[u8]) {
         let lower = name.to_ascii_lowercase();
-        let data = slidecraft_engine::cmd::base64_encode(bytes);
-        let ct = slidecraft_engine::cmd::insert::content_type(name, bytes);
-        let cmd = if lower.ends_with(".slidecraft") || lower.ends_with(".pptx") || lower.ends_with(".potx") || lower.ends_with(".ppsx") {
+        let data = deckcraft_engine::cmd::base64_encode(bytes);
+        let ct = deckcraft_engine::cmd::insert::content_type(name, bytes);
+        let cmd = if lower.ends_with(".deckcraft")
+            || lower.ends_with(".slidecraft")
+            || lower.ends_with(".pptx")
+            || lower.ends_with(".potx")
+            || lower.ends_with(".ppsx")
+        {
             "file.openBytes"
         } else if ct.starts_with("image/") {
             "insert.picture"
@@ -492,7 +497,7 @@ impl SlideApp {
         } else if lower.ends_with(".txt") || lower.ends_with(".md") {
             "slide.fromOutline"
         } else {
-            self.set_status(format!("{name}: SlideCraft can't open this kind of file"));
+            self.set_status(format!("{name}: DeckCraft can't open this kind of file"));
             return;
         };
         let p = if cmd == "slide.fromOutline" { json!({"text": String::from_utf8_lossy(bytes)}) } else { json!({"name": name, "data": data}) };
@@ -616,7 +621,7 @@ impl SlideApp {
                     let r = match img {
                         Some(png) => self
                             .session
-                            .execute("insert.picture", &json!({"name": "Pasted image.png", "data": slidecraft_engine::cmd::base64_encode(&png)})),
+                            .execute("insert.picture", &json!({"name": "Pasted image.png", "data": deckcraft_engine::cmd::base64_encode(&png)})),
                         None => self.session.execute("edit.paste", &json!({"text": text})),
                     };
                     if let Err(e) = r {
@@ -705,7 +710,7 @@ impl SlideApp {
         if self.show.is_none()
             && let Some(d) = self.session.active()
         {
-            let here: Vec<slidecraft_model::ShapeId> = if d.selection.target == slidecraft_engine::Target::Slides {
+            let here: Vec<deckcraft_model::ShapeId> = if d.selection.target == deckcraft_engine::Target::Slides {
                 media::slide_media(&d.doc, d.selection.slide).into_iter().map(|m| m.0).collect()
             } else {
                 vec![]

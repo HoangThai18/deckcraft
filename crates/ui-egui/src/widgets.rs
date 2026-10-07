@@ -1,9 +1,9 @@
 //! Ribbon widgets: large and small buttons, split buttons, groups, dropdowns, spinners, the colour
 //! picker and galleries.
 
+use deckcraft_color::{ColorScheme, Rgba, SchemeSlot};
+use deckcraft_model::ColorRef;
 use egui::{Align2, Color32, CornerRadius, Rect, Response, Sense, Stroke, Ui, Vec2, pos2, vec2};
-use slidecraft_color::{ColorScheme, Rgba, SchemeSlot};
-use slidecraft_model::ColorRef;
 
 use crate::icons::{self, Icon};
 use crate::theme::{self, Tokens};
@@ -287,9 +287,9 @@ pub fn color_grid(ui: &mut Ui, scheme: &ColorScheme, none_label: Option<&str>) -
         for row in 0..5 {
             for slot in slots {
                 let base = scheme.get(slot);
-                let vars = slidecraft_color::theme_variants(base);
+                let vars = deckcraft_color::theme_variants(base);
                 let Some((mods, label)) = vars.get(row) else { continue };
-                let c = slidecraft_color::apply(base, mods);
+                let c = deckcraft_color::apply(base, mods);
                 if sw(ui, c, label) {
                     let alias = match slot {
                         SchemeSlot::Lt1 => SchemeSlot::Bg1,
@@ -310,7 +310,7 @@ pub fn color_grid(ui: &mut Ui, scheme: &ColorScheme, none_label: Option<&str>) -
     ui.label(egui::RichText::new("Standard Colors").font(theme::bold(12.0)));
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 3.0;
-        for (c, name) in slidecraft_color::STANDARD_COLORS {
+        for (c, name) in deckcraft_color::STANDARD_COLORS {
             if sw(ui, c, name) {
                 out = Some(Some(ColorRef::rgb(c)));
             }

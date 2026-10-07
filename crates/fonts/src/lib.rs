@@ -1,9 +1,9 @@
-//! SlideCraft fonts: the font database (craft-fonts families, user and system fonts, and open
+//! DeckCraft fonts: the font database (craft-fonts families, user and system fonts, and open
 //! substitutes for the Office fonts presentations ask for), vertical metrics, glyph outlines and
 //! OpenType shaping.
 //!
 //! Shaping here is style-agnostic: [`shape`] turns a string in one face into glyph ids, clusters
-//! and advances in font units. `slidecraft-text` applies sizes, tracking, scaling and
+//! and advances in font units. `deckcraft-text` applies sizes, tracking, scaling and
 //! justification on top.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 #![forbid(unsafe_code)]

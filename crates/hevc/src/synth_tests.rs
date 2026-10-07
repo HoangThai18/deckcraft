@@ -8,7 +8,7 @@
 use crate::Decoder;
 use crate::cabac::{Contexts, NEXT_STATE, RANGE_TAB_LPS, init_contexts};
 use crate::spec_tables::*;
-use slidecraft_bitstream::{BitWriter, escape_rbsp};
+use deckcraft_bitstream::{BitWriter, escape_rbsp};
 
 const W: usize = 96;
 const H: usize = 64;

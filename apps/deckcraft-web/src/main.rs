@@ -1,6 +1,6 @@
-//! SlideCraft in the browser.
+//! DeckCraft in the browser.
 //!
-//! Runs the same [`slidecraft_ui_egui::SlideApp`] as the desktop app through eframe's web
+//! Runs the same [`deckcraft_ui_egui::SlideApp`] as the desktop app through eframe's web
 //! runner (wgpu: WebGPU where available, WebGL2 otherwise). Build with `trunk build --release`
 //! from this directory (output in `dist/web`).
 //!
@@ -27,5 +27,5 @@ fn main() {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    eprintln!("slidecraft-web only runs in the browser: build it with `trunk build --release` in apps/slidecraft-web");
+    eprintln!("deckcraft-web only runs in the browser: build it with `trunk build --release` in apps/deckcraft-web");
 }

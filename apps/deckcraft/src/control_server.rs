@@ -1,24 +1,24 @@
 //! Loopback JSON-lines control server: one request per line, one reply per line.
-//! This is the transport the MCP server (`slidecraft-cli mcp --connect`) wraps.
+//! This is the transport the MCP server (`deckcraft-cli mcp --connect`) wraps.
 
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::time::Duration;
 
+use deckcraft_ui_egui::ControlRequest;
 use serde_json::{Value, json};
-use slidecraft_ui_egui::ControlRequest;
 
 pub fn start(port: u16, ctx: egui::Context) -> Receiver<ControlRequest> {
     let (tx, rx) = channel::<ControlRequest>();
     let listener = match TcpListener::bind(("127.0.0.1", port)) {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("slidecraft: control server failed to bind 127.0.0.1:{port}: {e}");
+            eprintln!("deckcraft: control server failed to bind 127.0.0.1:{port}: {e}");
             return rx;
         }
     };
-    eprintln!("slidecraft: control server listening on 127.0.0.1:{port}");
+    eprintln!("deckcraft: control server listening on 127.0.0.1:{port}");
     std::thread::spawn(move || {
         for stream in listener.incoming().flatten() {
             let tx = tx.clone();

@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::fmt::Write as _;
 
-use slidecraft_geom::preset::FillMode;
-use slidecraft_model::CustomPath;
+use deckcraft_geom::preset::FillMode;
+use deckcraft_model::CustomPath;
 
 use crate::xml::{A, El, W};
 

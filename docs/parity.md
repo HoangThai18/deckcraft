@@ -11,13 +11,13 @@ Each row is scored **D** (done), **P** (partial: works but lacks options, UI or 
 Live Presentations), add-ins and VBA macros.
 
 <!-- SUMMARY -->
-**Weighted breadth parity: 78%** over 187 features.
+**Weighted breadth parity: 79%** over 187 features.
 
 | Priority | Features | Done | Partial | Missing | Parity |
 |---|---|---|---|---|---|
-| P0 | 72 | 61 | 10 | 1 | 92% |
-| P1 | 65 | 35 | 23 | 7 | 72% |
-| P2 | 50 | 11 | 11 | 28 | 33% |
+| P0 | 72 | 62 | 10 | 0 | 93% |
+| P1 | 65 | 37 | 22 | 6 | 74% |
+| P2 | 50 | 12 | 11 | 27 | 35% |
 
 | Area | Parity |
 |---|---|
@@ -34,7 +34,7 @@ Live Presentations), add-ins and VBA macros.
 | Charts | 65% |
 | SmartArt | 33% |
 | Pictures | 58% |
-| Media | 27% |
+| Media | 68% |
 | Transitions | 83% |
 | Animations | 74% |
 | Slide show | 66% |
@@ -42,9 +42,9 @@ Live Presentations), add-ins and VBA macros.
 | Draw | 33% |
 | Undo & clipboard | 88% |
 | Automation (✱) | 100% |
-| Platforms (✱) | 25% |
+| Platforms (✱) | 67% |
 
-Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Shape Format, Picture Format, Table Design/Layout, Chart Design), Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending), Format Shape pane, Edit chart data, Crop (and crop to shape, aspect ratio), Insert audio (any common format), Audio/video playback in the show, Animation pane (reorder, timing), Presenter view (notes, next slide, timer), macOS, Windows, Linux builds.
+Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Shape Format, Picture Format, Table Design/Layout, Chart Design), Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending), Format Shape pane, Edit chart data, Crop (and crop to shape, aspect ratio), Audio/video playback in the show (WMA/WMV not decodable yet), Animation pane (reorder, timing), Presenter view (notes, next slide, timer), macOS, Windows, Linux builds.
 
 ## Rows
 
@@ -194,10 +194,10 @@ Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Sh
 | Pictures | Change / reset picture | P1 | D |
 | Pictures | Compress pictures | P2 | M |
 | Pictures | Paste image from clipboard | P0 | D |
-| Media | Insert audio (any common format) | P0 | P |
-| Media | Insert video | P1 | P |
-| Media | Audio/video playback in the show | P0 | M |
-| Media | Trim, fade in/out, volume, loop, play across slides | P2 | P |
+| Media | Insert audio (any common format) | P0 | D |
+| Media | Insert video | P1 | D |
+| Media | Audio/video playback in the show (WMA/WMV not decodable yet) | P0 | P |
+| Media | Trim, fade in/out, volume, loop, play across slides | P2 | D |
 | Media | Record audio / screen recording | P2 | M |
 | Media | Icons, 3-D models, stock content | P2 | M |
 | Transitions | Transition gallery (fade, push, wipe, split, cover, uncover, zoom, morph…) | P0 | D |
@@ -235,5 +235,5 @@ Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Sh
 | Automation (✱) | Every command scriptable (CLI, control channel, MCP) | P0 | D |
 | Automation (✱) | Headless rendering and conversion | P0 | D |
 | Platforms (✱) | macOS, Windows, Linux builds | P0 | P |
-| Platforms (✱) | Web (WASM) build | P1 | M |
-| Platforms (✱) | BSD build | P2 | M |
+| Platforms (✱) | Web (WASM) build | P1 | D |
+| Platforms (✱) | BSD build | P2 | P |

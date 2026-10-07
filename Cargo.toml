@@ -1,41 +1,41 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]
-default-members = ["crates/*", "apps/slidecraft", "apps/slidecraft-cli"]
+default-members = ["crates/*", "apps/deckcraft", "apps/deckcraft-cli"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.90"
-repository = "https://github.com/storytold/slidecraft"
+repository = "https://github.com/storytold/deckcraft"
 
 [workspace.dependencies]
 # internal
-slidecraft-geom = { path = "crates/geom" }
-slidecraft-color = { path = "crates/color" }
-slidecraft-model = { path = "crates/model" }
-slidecraft-fonts = { path = "crates/fonts" }
-slidecraft-text = { path = "crates/text" }
-slidecraft-render = { path = "crates/render" }
-slidecraft-pdf = { path = "crates/pdf" }
-slidecraft-pptx = { path = "crates/pptx" }
-slidecraft-format = { path = "crates/format" }
-slidecraft-anim = { path = "crates/anim" }
-slidecraft-engine = { path = "crates/engine" }
-slidecraft-mcp = { path = "crates/mcp" }
-slidecraft-ui-egui = { path = "crates/ui-egui" }
-slidecraft-media = { path = "crates/media" }
+deckcraft-geom = { path = "crates/geom" }
+deckcraft-color = { path = "crates/color" }
+deckcraft-model = { path = "crates/model" }
+deckcraft-fonts = { path = "crates/fonts" }
+deckcraft-text = { path = "crates/text" }
+deckcraft-render = { path = "crates/render" }
+deckcraft-pdf = { path = "crates/pdf" }
+deckcraft-pptx = { path = "crates/pptx" }
+deckcraft-format = { path = "crates/format" }
+deckcraft-anim = { path = "crates/anim" }
+deckcraft-engine = { path = "crates/engine" }
+deckcraft-mcp = { path = "crates/mcp" }
+deckcraft-ui-egui = { path = "crates/ui-egui" }
+deckcraft-media = { path = "crates/media" }
 # codecs (ported from FilmCraft, same owner and licence)
-slidecraft-bitstream = { path = "crates/bitstream" }
-slidecraft-h264 = { path = "crates/h264" }
-slidecraft-hevc = { path = "crates/hevc" }
-slidecraft-vp9 = { path = "crates/vp9" }
-slidecraft-av1 = { path = "crates/av1" }
-slidecraft-isobmff = { path = "crates/isobmff" }
-slidecraft-matroska = { path = "crates/matroska" }
-slidecraft-ogg = { path = "crates/ogg" }
-slidecraft-opus = { path = "crates/opus" }
+deckcraft-bitstream = { path = "crates/bitstream" }
+deckcraft-h264 = { path = "crates/h264" }
+deckcraft-hevc = { path = "crates/hevc" }
+deckcraft-vp9 = { path = "crates/vp9" }
+deckcraft-av1 = { path = "crates/av1" }
+deckcraft-isobmff = { path = "crates/isobmff" }
+deckcraft-matroska = { path = "crates/matroska" }
+deckcraft-ogg = { path = "crates/ogg" }
+deckcraft-opus = { path = "crates/opus" }
 
 # foundation
 kurbo = { version = "0.13", features = ["serde"] }

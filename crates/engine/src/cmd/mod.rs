@@ -17,10 +17,10 @@ pub mod table;
 pub mod text;
 pub mod transition;
 
+use deckcraft_geom::Xfrm;
+use deckcraft_model::ShapeId;
 use serde::Serialize;
 use serde_json::Value;
-use slidecraft_geom::Xfrm;
-use slidecraft_model::ShapeId;
 
 use crate::{EngineError, Result, Session};
 
@@ -207,31 +207,31 @@ pub(crate) fn ok() -> Result<Value> {
 }
 
 /// Parse a colour param: `"#RRGGBB"`, `"accent1"`…, or `{"scheme":"accent2","lumMod":75000}`.
-pub(crate) fn color_param(p: &Value, key: &str) -> Option<slidecraft_model::ColorRef> {
+pub(crate) fn color_param(p: &Value, key: &str) -> Option<deckcraft_model::ColorRef> {
     let v = p.get(key)?;
     color_value(v)
 }
 
-pub(crate) fn color_value(v: &Value) -> Option<slidecraft_model::ColorRef> {
-    use slidecraft_model::ColorRef;
+pub(crate) fn color_value(v: &Value) -> Option<deckcraft_model::ColorRef> {
+    use deckcraft_model::ColorRef;
     match v {
         Value::String(s) => {
-            if let Some(slot) = slidecraft_color::SchemeSlot::from_xml(s) {
+            if let Some(slot) = deckcraft_color::SchemeSlot::from_xml(s) {
                 return Some(ColorRef::scheme(slot));
             }
-            if let Some(c) = slidecraft_color::Rgba::from_hex(s) {
+            if let Some(c) = deckcraft_color::Rgba::from_hex(s) {
                 return Some(ColorRef::rgb(c));
             }
-            slidecraft_color::preset(s).map(ColorRef::rgb)
+            deckcraft_color::preset(s).map(ColorRef::rgb)
         }
         Value::Object(o) => {
             let mut c = if let Some(s) = o.get("scheme").and_then(Value::as_str) {
-                ColorRef::scheme(slidecraft_color::SchemeSlot::from_xml(s)?)
+                ColorRef::scheme(deckcraft_color::SchemeSlot::from_xml(s)?)
             } else {
-                ColorRef::rgb(slidecraft_color::Rgba::from_hex(o.get("rgb").and_then(Value::as_str)?)?)
+                ColorRef::rgb(deckcraft_color::Rgba::from_hex(o.get("rgb").and_then(Value::as_str)?)?)
             };
             for (k, val) in o {
-                if let Some(t) = slidecraft_color::ColorTransform::from_xml(k, val.as_i64().and_then(|x| i32::try_from(x).ok())) {
+                if let Some(t) = deckcraft_color::ColorTransform::from_xml(k, val.as_i64().and_then(|x| i32::try_from(x).ok())) {
                     c.mods.push(t);
                 }
             }
@@ -242,20 +242,20 @@ pub(crate) fn color_value(v: &Value) -> Option<slidecraft_model::ColorRef> {
 }
 
 /// Look a shape up by id in the edited tree.
-pub(crate) fn shape_of(s: &Session, id: ShapeId) -> Result<slidecraft_model::Shape> {
+pub(crate) fn shape_of(s: &Session, id: ShapeId) -> Result<deckcraft_model::Shape> {
     s.doc()?.shape(id).cloned().ok_or_else(|| EngineError::Other(format!("no shape {id}")))
 }
 
 /// Effective box of a shape (placeholders inherit theirs).
-pub fn xfrm_of(doc: &slidecraft_model::Presentation, sel: &crate::Selection, shape: &slidecraft_model::Shape) -> Xfrm {
+pub fn xfrm_of(doc: &deckcraft_model::Presentation, sel: &crate::Selection, shape: &deckcraft_model::Shape) -> Xfrm {
     if let Some(x) = shape.xfrm {
         return x;
     }
     ctx_xfrm(doc, sel, shape)
 }
 
-fn ctx_xfrm(doc: &slidecraft_model::Presentation, sel: &crate::Selection, shape: &slidecraft_model::Shape) -> Xfrm {
-    use slidecraft_model::resolve::{self, Ctx};
+fn ctx_xfrm(doc: &deckcraft_model::Presentation, sel: &crate::Selection, shape: &deckcraft_model::Shape) -> Xfrm {
+    use deckcraft_model::resolve::{self, Ctx};
     match sel.target {
         crate::Target::Slides => doc.slides.get(sel.slide).and_then(|s| Ctx::for_slide(doc, s)).map(|c| resolve::xfrm(&c, shape)),
         crate::Target::Master { master } => doc.masters.get(master).map(|m| resolve::xfrm(&Ctx::for_master(doc, m), shape)),
@@ -267,21 +267,21 @@ fn ctx_xfrm(doc: &slidecraft_model::Presentation, sel: &crate::Selection, shape:
 }
 
 /// Run `f` on each target shape (copy-on-write), materialising inherited boxes first.
-pub(crate) fn edit_shapes(s: &mut Session, p: &Value, cmd: &str, f: impl Fn(&mut slidecraft_model::Shape) -> Result<()>) -> Result<Value> {
+pub(crate) fn edit_shapes(s: &mut Session, p: &Value, cmd: &str, f: impl Fn(&mut deckcraft_model::Shape) -> Result<()>) -> Result<Value> {
     let ids = targets(s, p)?;
     if ids.is_empty() {
         return Err(bad(cmd, "no shapes selected"));
     }
     s.edit(|doc, sel| {
         let boxes: Vec<(ShapeId, Xfrm)> = {
-            let st_shapes: Vec<slidecraft_model::Shape> =
-                ids.iter().filter_map(|id| current_shapes(doc, sel).and_then(|v| slidecraft_model::find_shape(v, *id)).cloned()).collect();
+            let st_shapes: Vec<deckcraft_model::Shape> =
+                ids.iter().filter_map(|id| current_shapes(doc, sel).and_then(|v| deckcraft_model::find_shape(v, *id)).cloned()).collect();
             st_shapes.iter().map(|sh| (sh.id, xfrm_of(doc, sel, sh))).collect()
         };
         let shapes = crate::shapes_mut(doc, sel).ok_or_else(|| bad(cmd, "no slide"))?;
         let mut n = 0;
         for id in &ids {
-            if let Some(sh) = slidecraft_model::find_shape_mut(shapes, *id) {
+            if let Some(sh) = deckcraft_model::find_shape_mut(shapes, *id) {
                 if sh.xfrm.is_none() {
                     sh.xfrm = boxes.iter().find(|(i, _)| i == id).map(|(_, x)| *x);
                 }
@@ -296,7 +296,7 @@ pub(crate) fn edit_shapes(s: &mut Session, p: &Value, cmd: &str, f: impl Fn(&mut
     })
 }
 
-pub(crate) fn current_shapes<'a>(doc: &'a slidecraft_model::Presentation, sel: &crate::Selection) -> Option<&'a Vec<slidecraft_model::Shape>> {
+pub(crate) fn current_shapes<'a>(doc: &'a deckcraft_model::Presentation, sel: &crate::Selection) -> Option<&'a Vec<deckcraft_model::Shape>> {
     match sel.target {
         crate::Target::Slides => doc.slides.get(sel.slide).map(|s| &s.shapes),
         crate::Target::Master { master } => doc.masters.get(master).map(|m| &m.shapes),

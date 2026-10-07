@@ -1,4 +1,4 @@
-//! The native `.slidecraft` format: a zip holding `presentation.json` (the model, minus media
+//! The native `.deckcraft` format: a zip holding `presentation.json` (the model, minus media
 //! bytes), `media/<id>` files with the embedded media, and `mimetype`. Readers ignore unknown
 //! fields, so newer files open in older builds with what those builds understand.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
@@ -7,11 +7,13 @@
 use std::io::{Cursor, Read, Write};
 use std::sync::Arc;
 
-use slidecraft_model::text::{Paragraph, TextBody};
-use slidecraft_model::{LayoutType, Presentation, defaults};
+use deckcraft_model::text::{Paragraph, TextBody};
+use deckcraft_model::{LayoutType, Presentation, defaults};
 
-pub const MIMETYPE: &str = "application/vnd.storyteller.slidecraft+zip";
-pub const EXTENSION: &str = "slidecraft";
+pub const MIMETYPE: &str = "application/vnd.storyteller.deckcraft+zip";
+/// Files written before the SlideCraft → DeckCraft rename (`.slidecraft`) are still read.
+pub const LEGACY_MIMETYPE: &str = concat!("application/vnd.storyteller.", "slide", "craft+zip");
+pub const EXTENSION: &str = "deckcraft";
 /// Format version written into the manifest.
 pub const VERSION: u32 = 1;
 /// Largest entry we will inflate (guards against zip bombs).
@@ -19,7 +21,7 @@ const MAX_ENTRY: u64 = 2 << 30;
 
 #[derive(Debug, thiserror::Error)]
 pub enum FormatError {
-    #[error("not a SlideCraft file: {0}")]
+    #[error("not a DeckCraft file: {0}")]
     NotOurs(String),
     #[error("damaged file: {0}")]
     Damaged(String),
@@ -48,9 +50,9 @@ pub fn save(p: &Presentation) -> Result<Vec<u8>> {
         z.start_file("mimetype", stored).map_err(w)?;
         z.write_all(MIMETYPE.as_bytes()).map_err(|e| FormatError::Write(e.to_string()))?;
         let m = Manifest {
-            format: "slidecraft".into(),
+            format: "deckcraft".into(),
             version: VERSION,
-            generator: format!("SlideCraft {}", env!("CARGO_PKG_VERSION")),
+            generator: format!("DeckCraft {}", env!("CARGO_PKG_VERSION")),
             presentation: p.clone(),
         };
         let json = serde_json::to_vec(&m).map_err(|e| FormatError::Write(e.to_string()))?;
@@ -79,9 +81,9 @@ fn is_compressed(ct: &str) -> bool {
         || ct.contains("zip")
 }
 
-/// Does this look like a `.slidecraft` file?
+/// Does this look like a `.deckcraft` file?
 pub fn sniff(bytes: &[u8]) -> bool {
-    bytes.starts_with(b"PK") && bytes.windows(MIMETYPE.len()).take(200).any(|w| w == MIMETYPE.as_bytes())
+    bytes.starts_with(b"PK") && [MIMETYPE, LEGACY_MIMETYPE].iter().any(|m| bytes.windows(m.len()).take(200).any(|w| w == m.as_bytes()))
 }
 
 fn read_entry(z: &mut zip::ZipArchive<Cursor<&[u8]>>, name: &str) -> Result<Vec<u8>> {
@@ -99,7 +101,7 @@ pub fn load(bytes: &[u8]) -> Result<Presentation> {
     let mut z = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| FormatError::NotOurs(e.to_string()))?;
     let json = read_entry(&mut z, "presentation.json").map_err(|_| FormatError::NotOurs("no presentation.json".into()))?;
     let m: Manifest = serde_json::from_slice(&json).map_err(|e| FormatError::Damaged(e.to_string()))?;
-    if m.format != "slidecraft" {
+    if m.format != "deckcraft" {
         return Err(FormatError::NotOurs(m.format));
     }
     let mut p = m.presentation;
@@ -126,7 +128,7 @@ pub fn repair(p: &mut Presentation) {
         let needs_layout = p.slides.get(i).is_some_and(|s| p.layout(s.layout).is_none());
         let dup = p.slides.get(i).is_some_and(|s| !seen.insert(s.id));
         if needs_layout || dup {
-            let new_id = if dup { Some(slidecraft_model::SlideId(p.alloc_id())) } else { None };
+            let new_id = if dup { Some(deckcraft_model::SlideId(p.alloc_id())) } else { None };
             if let Some(s) = p.slides.get_mut(i) {
                 let s = Arc::make_mut(s);
                 if needs_layout {
@@ -150,8 +152,8 @@ pub fn repair(p: &mut Presentation) {
 pub fn outline_to_slides(p: &mut Presentation, text: &str) -> usize {
     let Some(lay) = defaults::layout_of_kind(p, LayoutType::TitleAndContent) else { return 0 };
     let mut made = 0;
-    let mut cur: Option<slidecraft_model::Slide> = None;
-    let flush = |p: &mut Presentation, s: Option<slidecraft_model::Slide>, made: &mut usize| {
+    let mut cur: Option<deckcraft_model::Slide> = None;
+    let flush = |p: &mut Presentation, s: Option<deckcraft_model::Slide>, made: &mut usize| {
         if let Some(s) = s {
             p.slides.push(Arc::new(s));
             *made += 1;
@@ -242,7 +244,7 @@ mod tests {
     #[test]
     fn repair_fixes_missing_layout_and_size() {
         let mut p = Presentation::default();
-        Arc::make_mut(&mut p.slides[0]).layout = slidecraft_model::LayoutId(99999);
+        Arc::make_mut(&mut p.slides[0]).layout = deckcraft_model::LayoutId(99999);
         p.slide_size.width = f64::NAN;
         repair(&mut p);
         assert!(p.validate().is_empty());

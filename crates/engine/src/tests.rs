@@ -174,7 +174,7 @@ fn sample_deck_builds_and_renders() {
     assert!(st.doc.validate().is_empty());
     assert!(!st.is_dirty());
     for i in 0..st.doc.slides.len() {
-        let img = slidecraft_render::render_slide(&st.doc, i, &slidecraft_render::RenderOpts { scale: 0.2, ..Default::default() });
+        let img = deckcraft_render::render_slide(&st.doc, i, &deckcraft_render::RenderOpts { scale: 0.2, ..Default::default() });
         assert_eq!(img.width, 192);
     }
     let v = s.execute("document.inspect", &json!({})).unwrap();
@@ -187,7 +187,7 @@ fn save_and_reopen_native() {
     sample::open_sample(&mut s).unwrap();
     let bytes = s.execute("file.saveBytes", &json!({})).unwrap()["data"].as_str().unwrap().to_string();
     let n = s.doc().unwrap().doc.slides.len();
-    s.execute("file.openBytes", &json!({"name": "x.slidecraft", "data": bytes})).unwrap();
+    s.execute("file.openBytes", &json!({"name": "x.deckcraft", "data": bytes})).unwrap();
     assert_eq!(s.doc().unwrap().doc.slides.len(), n);
     assert_eq!(s.documents().len(), 2);
 }
@@ -249,9 +249,9 @@ fn themes_and_slide_size() {
     assert!(v["shapes"].as_array().unwrap().iter().any(|x| x["placeholder"] == "sldNum"));
 }
 
-fn line_ends(s: &Session, id: u64) -> (slidecraft_geom::Point, slidecraft_geom::Point) {
+fn line_ends(s: &Session, id: u64) -> (deckcraft_geom::Point, deckcraft_geom::Point) {
     let st = s.doc().unwrap();
-    let sh = st.shape(slidecraft_model::ShapeId(id as u32)).unwrap();
+    let sh = st.shape(deckcraft_model::ShapeId(id as u32)).unwrap();
     connect::endpoints(&cmd::xfrm_of(&st.doc, &st.selection, sh))
 }
 
@@ -271,7 +271,7 @@ fn connectors_follow_glued_shapes() {
     s.execute("shape.move", &json!({"dx": 50, "dy": 20})).unwrap();
     let (q0, q1) = line_ends(&s, c);
     assert!((q0 - p0).hypot() < 1e-6);
-    assert!(((q1 - p1) - slidecraft_geom::Vec2::new(50.0, 20.0)).hypot() < 1e-6, "{p1:?} → {q1:?}");
+    assert!(((q1 - p1) - deckcraft_geom::Vec2::new(50.0, 20.0)).hypot() < 1e-6, "{p1:?} → {q1:?}");
     // Undo puts both back in one step.
     s.execute("edit.undo", &json!({})).unwrap();
     assert!((line_ends(&s, c).1 - p1).hypot() < 1e-6);
@@ -279,8 +279,8 @@ fn connectors_follow_glued_shapes() {
     s.execute("edit.select", &json!({"ids": [a]})).unwrap();
     s.execute("edit.delete", &json!({})).unwrap();
     let st = s.doc().unwrap();
-    let sh = st.shape(slidecraft_model::ShapeId(c as u32)).unwrap();
-    assert!(matches!(sh.kind, slidecraft_model::ShapeKind::Connector { start: None, end: Some(_) }));
+    let sh = st.shape(deckcraft_model::ShapeId(c as u32)).unwrap();
+    assert!(matches!(sh.kind, deckcraft_model::ShapeKind::Connector { start: None, end: Some(_) }));
 }
 
 #[test]
@@ -301,7 +301,7 @@ fn drawing_a_line_between_shapes_glues_it() {
     let st = s.doc().unwrap();
     let line = st.shapes().iter().find(|x| x.is_line()).unwrap();
     match line.kind {
-        slidecraft_model::ShapeKind::Connector { start: Some((x, _)), end: Some((y, _)) } => {
+        deckcraft_model::ShapeKind::Connector { start: Some((x, _)), end: Some((y, _)) } => {
             assert_eq!((x.0 as u64, y.0 as u64), (a, b));
         }
         ref k => panic!("not glued: {k:?}"),
@@ -336,7 +336,7 @@ fn freeform_tools_and_command() {
     let st = s.doc().unwrap();
     let sh = st.shapes().last().unwrap();
     match &sh.geom {
-        slidecraft_model::Geom::Custom { paths } => assert!(paths[0].d.ends_with('Z') && paths[0].d.matches(" L ").count() == 2, "{}", paths[0].d),
+        deckcraft_model::Geom::Custom { paths } => assert!(paths[0].d.ends_with('Z') && paths[0].d.matches(" L ").count() == 2, "{}", paths[0].d),
         g => panic!("{g:?}"),
     }
     let x = sh.xfrm.unwrap();
@@ -359,10 +359,10 @@ fn freeform_tools_and_command() {
         s.pointer(ev(tools::PointerKind::Up, x, y)).unwrap();
     }
     let r = s.key("Enter", Default::default()).unwrap();
-    let id = slidecraft_model::ShapeId(r["id"].as_u64().unwrap() as u32);
+    let id = deckcraft_model::ShapeId(r["id"].as_u64().unwrap() as u32);
     let st = s.doc().unwrap();
     match &st.shape(id).unwrap().geom {
-        slidecraft_model::Geom::Custom { paths } => assert_eq!(paths[0].d.matches(" C ").count(), 3),
+        deckcraft_model::Geom::Custom { paths } => assert_eq!(paths[0].d.matches(" C ").count(), 3),
         g => panic!("{g:?}"),
     }
 }

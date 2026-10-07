@@ -1,26 +1,26 @@
 [package]
-name = "slidecraft-pptx"
+name = "deckcraft-pptx"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "SlideCraft PPTX: Office Open XML (PresentationML/DrawingML) import and export, written from the public ECMA-376 standard"
+description = "DeckCraft PPTX: Office Open XML (PresentationML/DrawingML) import and export, written from the public ECMA-376 standard"
 
 [lints]
 workspace = true
 
 [dependencies]
-slidecraft-model = { workspace = true }
-slidecraft-geom = { workspace = true }
-slidecraft-color = { workspace = true }
+deckcraft-model = { workspace = true }
+deckcraft-geom = { workspace = true }
+deckcraft-color = { workspace = true }
 quick-xml = { workspace = true }
 zip = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
 
 [dev-dependencies]
-slidecraft-engine = { workspace = true }
+deckcraft-engine = { workspace = true }
 serde_json = { workspace = true }
-slidecraft-color = { workspace = true }
-slidecraft-geom = { workspace = true }
+deckcraft-color = { workspace = true }
+deckcraft-geom = { workspace = true }
 image = { workspace = true }
 zip = { workspace = true }

@@ -6,7 +6,7 @@
 
 use crate::Decoder;
 use crate::cabac::{Cabac, NEXT_STATE, RANGE_TAB_LPS};
-use slidecraft_bitstream::{BitWriter, escape_rbsp};
+use deckcraft_bitstream::{BitWriter, escape_rbsp};
 
 const MB_W: usize = 4;
 const MB_H: usize = 3;

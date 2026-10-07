@@ -1,12 +1,12 @@
 //! Tables: cell fills from the table style (or overrides), borders, and cell text.
 
+use deckcraft_color::{ColorTransform, Rgba, SchemeSlot};
+use deckcraft_model::resolve::Ctx;
+use deckcraft_model::style::{ColorRef, Fill};
+use deckcraft_model::table::Table;
+use deckcraft_model::text::Anchor;
+use deckcraft_model::{Presentation, Shape};
 use kurbo::{Affine, BezPath, Rect, Shape as _};
-use slidecraft_color::{ColorTransform, Rgba, SchemeSlot};
-use slidecraft_model::resolve::Ctx;
-use slidecraft_model::style::{ColorRef, Fill};
-use slidecraft_model::table::Table;
-use slidecraft_model::text::Anchor;
-use slidecraft_model::{Presentation, Shape};
 use vello_cpu::{RenderContext, peniko};
 
 use crate::color;
@@ -42,7 +42,7 @@ pub fn look(ctx: &Ctx, t: &Table, r: usize, c: usize) -> CellLook {
     let body_r = if t.first_row { r.wrapping_sub(1) } else { r };
     let band = t.band_row && !header && !total && body_r % 2 == 0;
     let band_c = t.band_col && c.is_multiple_of(2);
-    let tint = |k: i32| slidecraft_color::apply(a, &[ColorTransform::Tint(k)]);
+    let tint = |k: i32| deckcraft_color::apply(a, &[ColorTransform::Tint(k)]);
     let white = Rgba::WHITE;
     let dark_text = ctx.color(&ColorRef::scheme(SchemeSlot::Tx1), None);
     match kind {
@@ -64,9 +64,9 @@ pub fn look(ctx: &Ctx, t: &Table, r: usize, c: usize) -> CellLook {
             fill: Some(if header {
                 Rgba::BLACK
             } else if band || band_c {
-                slidecraft_color::apply(a, &[ColorTransform::Shade(60000)])
+                deckcraft_color::apply(a, &[ColorTransform::Shade(60000)])
             } else {
-                slidecraft_color::apply(a, &[ColorTransform::Shade(75000)])
+                deckcraft_color::apply(a, &[ColorTransform::Shade(75000)])
             }),
             text: Some(white),
             bold: header || total || first_col,
@@ -123,7 +123,7 @@ pub fn cell_rects(t: &Table) -> Vec<(usize, usize, Rect)> {
     out
 }
 
-pub fn draw(ctx: &mut RenderContext, pres: &Presentation, rctx: &Ctx, t: &Table, m: Affine, _w: f64, _h: f64, fields: &dyn slidecraft_text::Fields) {
+pub fn draw(ctx: &mut RenderContext, pres: &Presentation, rctx: &Ctx, t: &Table, m: Affine, _w: f64, _h: f64, fields: &dyn deckcraft_text::Fields) {
     let _ = pres;
     let rects = cell_rects(t);
     for (r, c, rect) in &rects {
@@ -132,7 +132,7 @@ pub fn draw(ctx: &mut RenderContext, pres: &Presentation, rctx: &Ctx, t: &Table,
         ctx.set_transform(m);
         match &cell.fill {
             Some(f) => {
-                crate::paint::fill_path(ctx, rctx, f, None, &rect.to_path(0.1), *rect, m, slidecraft_geom::preset::FillMode::Norm, 1.0, rctx.pres)
+                crate::paint::fill_path(ctx, rctx, f, None, &rect.to_path(0.1), *rect, m, deckcraft_geom::preset::FillMode::Norm, 1.0, rctx.pres)
             }
             None => {
                 if let Some(fc) = lk.fill {

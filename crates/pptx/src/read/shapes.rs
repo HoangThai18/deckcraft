@@ -3,12 +3,12 @@
 
 use std::collections::{HashMap, HashSet};
 
-use slidecraft_color::SchemeSlot;
-use slidecraft_geom::{Xfrm, preset};
-use slidecraft_model::style::{ColorRef, Effects, Fill};
-use slidecraft_model::table::{Cell, Row, Table};
-use slidecraft_model::text::{Anchor, TextDir};
-use slidecraft_model::{Geom, MediaClip, PhType, Placeholder, Shape, ShapeId, ShapeKind, ShapeStyle};
+use deckcraft_color::SchemeSlot;
+use deckcraft_geom::{Xfrm, preset};
+use deckcraft_model::style::{ColorRef, Effects, Fill};
+use deckcraft_model::table::{Cell, Row, Table};
+use deckcraft_model::text::{Anchor, TextDir};
+use deckcraft_model::{Geom, MediaClip, PhType, Placeholder, Shape, ShapeId, ShapeKind, ShapeStyle};
 
 use super::{Imp, Part, dml};
 use crate::xml::El;
@@ -188,7 +188,7 @@ fn sp_pr(imp: &mut Imp, part: &Part, s: &mut Shape, pr: &El) {
     if let Some(pg) = pr.child("prstGeom") {
         s.geom = preset_geom(pg);
     } else if let Some(cg) = pr.child("custGeom") {
-        let (w, h) = s.xfrm.map(|x| (slidecraft_geom::pt_to_emu(x.w) as f64, slidecraft_geom::pt_to_emu(x.h) as f64)).unwrap_or((21600.0, 21600.0));
+        let (w, h) = s.xfrm.map(|x| (deckcraft_geom::pt_to_emu(x.w) as f64, deckcraft_geom::pt_to_emu(x.h) as f64)).unwrap_or((21600.0, 21600.0));
         let paths = crate::custgeom::read_cust_geom(cg, w, h);
         if !paths.is_empty() {
             s.geom = Geom::Custom { paths };

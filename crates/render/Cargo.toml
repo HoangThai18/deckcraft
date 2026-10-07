@@ -1,19 +1,19 @@
 [package]
-name = "slidecraft-render"
+name = "deckcraft-render"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "SlideCraft renderer: slides, layouts and masters to pixels (vello_cpu): fills, outlines, effects, pictures, text, tables, charts"
+description = "DeckCraft renderer: slides, layouts and masters to pixels (vello_cpu): fills, outlines, effects, pictures, text, tables, charts"
 
 [lints]
 workspace = true
 
 [dependencies]
-slidecraft-geom = { workspace = true }
-slidecraft-color = { workspace = true }
-slidecraft-model = { workspace = true }
-slidecraft-fonts = { workspace = true }
-slidecraft-text = { workspace = true }
+deckcraft-geom = { workspace = true }
+deckcraft-color = { workspace = true }
+deckcraft-model = { workspace = true }
+deckcraft-fonts = { workspace = true }
+deckcraft-text = { workspace = true }
 vello_cpu = { workspace = true }
 vello_common = { workspace = true }
 image = { workspace = true }

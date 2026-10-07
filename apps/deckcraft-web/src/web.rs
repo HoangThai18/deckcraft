@@ -1,15 +1,15 @@
 //! The browser shell: web `Services`, drag-and-drop, and the eframe web runner.
 
-use slidecraft_engine::Session;
-use slidecraft_ui_egui::{Inbox, Services, SlideApp};
+use deckcraft_engine::Session;
+use deckcraft_ui_egui::{Inbox, Services, SlideApp};
 use wasm_bindgen::JsCast as _;
 
-const PRESENTATION_EXTS: &[&str] = &["slidecraft", "pptx", "potx", "ppsx", "txt", "md"];
+const PRESENTATION_EXTS: &[&str] = &["deckcraft", "pptx", "potx", "ppsx", "txt", "md"];
 const PICTURE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "tif", "tiff"];
 const AUDIO_EXTS: &[&str] = &["wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "aif", "aiff"];
 const VIDEO_EXTS: &[&str] = &["mp4", "m4v", "mov", "webm"];
-const CANVAS_ID: &str = "slidecraft_canvas";
-const LOADING_ID: &str = "slidecraft_loading";
+const CANVAS_ID: &str = "deckcraft_canvas";
+const LOADING_ID: &str = "deckcraft_loading";
 
 pub fn start() {
     eframe::WebLogger::init(log::LevelFilter::Info).ok();
@@ -34,13 +34,13 @@ pub fn start() {
                 options,
                 Box::new(move |cc| {
                     if let Some(rs) = &cc.wgpu_render_state {
-                        log::info!("slidecraft-web {}: wgpu backend {:?}", env!("CARGO_PKG_VERSION"), rs.adapter.get_info().backend);
+                        log::info!("deckcraft-web {}: wgpu backend {:?}", env!("CARGO_PKG_VERSION"), rs.adapter.get_info().backend);
                     }
                     let inbox: Inbox = Inbox::default();
                     let mut app = SlideApp::new(Session::new(), services(inbox.clone(), cc.egui_ctx.clone()));
                     let q = query();
                     if !q.contains("blank") {
-                        if let Err(e) = slidecraft_engine::sample::open_sample(&mut app.session) {
+                        if let Err(e) = deckcraft_engine::sample::open_sample(&mut app.session) {
                             log::error!("sample deck: {e}");
                         }
                     } else if let Err(e) = app.run("file.new", serde_json::json!({})) {
@@ -56,7 +56,7 @@ pub fn start() {
         if let Some(el) = document.get_element_by_id(LOADING_ID) {
             match result {
                 Ok(()) => el.remove(),
-                Err(e) => el.set_inner_html(&format!("<p>SlideCraft failed to start: {e:?}</p><p>A browser with WebGPU or WebGL2 is required.</p>")),
+                Err(e) => el.set_inner_html(&format!("<p>DeckCraft failed to start: {e:?}</p><p>A browser with WebGPU or WebGL2 is required.</p>")),
             }
         }
     });
@@ -139,7 +139,7 @@ fn services(inbox: Inbox, ctx: egui::Context) -> Services {
 /// Trigger a browser download of `bytes` named after the last component of `path`.
 fn download(path: &str, bytes: &[u8]) -> Result<(), String> {
     let js = |e: wasm_bindgen::JsValue| format!("{e:?}");
-    let name = std::path::Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "slidecraft".into());
+    let name = std::path::Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "deckcraft".into());
     let window = web_sys::window().ok_or("no window")?;
     let document = window.document().ok_or("no document")?;
     let parts = js_sys::Array::of1(&js_sys::Uint8Array::from(bytes));
@@ -170,7 +170,7 @@ fn mime_for(name: &str) -> &'static str {
         Some("pdf") => "application/pdf",
         Some("txt") => "text/plain",
         Some("pptx") => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        Some("slidecraft") => "application/zip",
+        Some("deckcraft") => "application/zip",
         _ => "application/octet-stream",
     }
 }

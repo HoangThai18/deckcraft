@@ -1,8 +1,8 @@
 use super::*;
-use slidecraft_model::chart::ChartType;
-use slidecraft_model::style::ColorRef;
-use slidecraft_model::text::TextBody;
-use slidecraft_model::{Chart, Geom, Presentation, Shape, ShapeId, ShapeKind, ShapeStyle, Table, Xfrm};
+use deckcraft_model::chart::ChartType;
+use deckcraft_model::style::ColorRef;
+use deckcraft_model::text::TextBody;
+use deckcraft_model::{Chart, Geom, Presentation, Shape, ShapeId, ShapeKind, ShapeStyle, Table, Xfrm};
 
 fn deck_with(shapes: Vec<Shape>) -> Presentation {
     let mut p = Presentation::default();
@@ -24,12 +24,12 @@ fn shape_fill_uses_theme_accent() {
     let sh = Shape {
         id: ShapeId(500),
         xfrm: Some(Xfrm::new(100.0, 100.0, 200.0, 100.0)),
-        style: Some(ShapeStyle::accent(slidecraft_color::SchemeSlot::Accent1)),
+        style: Some(ShapeStyle::accent(deckcraft_color::SchemeSlot::Accent1)),
         ..Default::default()
     };
     let p = deck_with(vec![sh]);
     let img = render_slide(&p, 0, &RenderOpts { scale: 1.0, ..Default::default() });
-    let accent = p.masters[0].theme.colors.get(slidecraft_color::SchemeSlot::Accent1);
+    let accent = p.masters[0].theme.colors.get(deckcraft_color::SchemeSlot::Accent1);
     let px = img.pixel(200, 150);
     assert!((px[0] as i32 - accent.r as i32).abs() <= 2 && (px[2] as i32 - accent.b as i32).abs() <= 2, "{px:?} vs {accent:?}");
     assert_eq!(img.pixel(50, 50), [255, 255, 255, 255]);
@@ -49,14 +49,14 @@ fn text_draws_ink() {
 
 #[test]
 fn every_preset_renders_without_panic() {
-    let shapes: Vec<Shape> = slidecraft_geom::preset::CATALOG
+    let shapes: Vec<Shape> = deckcraft_geom::preset::CATALOG
         .iter()
         .enumerate()
         .map(|(i, pr)| Shape {
             id: ShapeId(1000 + i as u32),
             xfrm: Some(Xfrm::new((i % 16) as f64 * 60.0, (i / 16) as f64 * 55.0, 50.0, 45.0)),
             geom: Geom::preset(pr.name),
-            style: Some(ShapeStyle::accent(slidecraft_color::SchemeSlot::Accent2)),
+            style: Some(ShapeStyle::accent(deckcraft_color::SchemeSlot::Accent2)),
             ..Default::default()
         })
         .collect();
@@ -70,12 +70,12 @@ fn effects_tables_charts_render() {
     let mut sh = Shape {
         id: ShapeId(600),
         xfrm: Some(Xfrm::new(50.0, 50.0, 200.0, 100.0)),
-        style: Some(ShapeStyle::accent(slidecraft_color::SchemeSlot::Accent1)),
+        style: Some(ShapeStyle::accent(deckcraft_color::SchemeSlot::Accent1)),
         ..Default::default()
     };
-    sh.effects = Some(slidecraft_model::Effects {
-        outer_shadow: Some(slidecraft_model::style::Shadow {
-            color: ColorRef::rgb(slidecraft_color::Rgba::BLACK),
+    sh.effects = Some(deckcraft_model::Effects {
+        outer_shadow: Some(deckcraft_model::style::Shadow {
+            color: ColorRef::rgb(deckcraft_color::Rgba::BLACK),
             blur: 8.0,
             dist: 6.0,
             dir: 45.0,
@@ -87,7 +87,7 @@ fn effects_tables_charts_render() {
             align: String::new(),
             rotate_with_shape: false,
         }),
-        glow: Some(slidecraft_model::style::Glow { color: ColorRef::rgb(slidecraft_color::Rgba::rgb(255, 200, 0)), radius: 6.0 }),
+        glow: Some(deckcraft_model::style::Glow { color: ColorRef::rgb(deckcraft_color::Rgba::rgb(255, 200, 0)), radius: 6.0 }),
         soft_edge: Some(4.0),
         ..Default::default()
     });

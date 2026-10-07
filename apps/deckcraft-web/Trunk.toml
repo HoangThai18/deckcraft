@@ -1,4 +1,4 @@
-# Build with: trunk build --release   (from apps/slidecraft-web)
+# Build with: trunk build --release   (from apps/deckcraft-web)
 [build]
 target = "index.html"
 dist = "../../dist/web"

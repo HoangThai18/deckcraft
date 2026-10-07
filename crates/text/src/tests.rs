@@ -1,7 +1,7 @@
 use super::*;
-use slidecraft_model::defaults;
-use slidecraft_model::text::{Paragraph, Run};
-use slidecraft_model::{LayoutType, Presentation, Xfrm};
+use deckcraft_model::defaults;
+use deckcraft_model::text::{Paragraph, Run};
+use deckcraft_model::{LayoutType, Presentation, Xfrm};
 
 fn setup(text: &str, w: f64, h: f64) -> (Presentation, Shape) {
     let mut p = Presentation::default();
@@ -89,7 +89,7 @@ fn empty_and_hostile_bodies_never_panic() {
     t.paragraphs = vec![Paragraph {
         runs: vec![
             Run::new("\t\u{b}\u{b}🙂 ﷽ 日本語"),
-            Run { text: String::new(), props: Default::default(), kind: slidecraft_model::text::RunKind::Break },
+            Run { text: String::new(), props: Default::default(), kind: deckcraft_model::text::RunKind::Break },
         ],
         ..Default::default()
     }];

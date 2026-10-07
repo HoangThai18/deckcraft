@@ -1,7 +1,7 @@
 //! Colours, fills, lines and effects.
 
+use deckcraft_color::{ColorScheme, ColorTransform, Rgba, SchemeSlot};
 use serde::{Deserialize, Serialize};
-use slidecraft_color::{ColorScheme, ColorTransform, Rgba, SchemeSlot};
 
 use crate::MediaId;
 
@@ -50,10 +50,10 @@ impl ColorRef {
             ColorBase::Rgb { rgb } => *rgb,
             ColorBase::Scheme { slot: SchemeSlot::PhClr } => ph.unwrap_or_else(|| scheme.get(SchemeSlot::Accent1)),
             ColorBase::Scheme { slot } => scheme.get(*slot),
-            ColorBase::Preset { name } => slidecraft_color::preset(name).unwrap_or(Rgba::BLACK),
+            ColorBase::Preset { name } => deckcraft_color::preset(name).unwrap_or(Rgba::BLACK),
             ColorBase::System { last, .. } => *last,
         };
-        slidecraft_color::apply(base, &self.mods)
+        deckcraft_color::apply(base, &self.mods)
     }
     /// Alpha (0–1) from an `alpha` transform, if any.
     pub fn alpha(&self) -> f64 {

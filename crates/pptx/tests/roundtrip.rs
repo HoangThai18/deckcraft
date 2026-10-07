@@ -2,19 +2,19 @@
 
 use std::sync::Arc;
 
-use slidecraft_color::{ColorTransform, Rgba, SchemeSlot};
-use slidecraft_geom::Xfrm;
-use slidecraft_model::anim::{AnimClass, AnimStart, Animation, TextBuild, Transition};
-use slidecraft_model::chart::{Chart, ChartType};
-use slidecraft_model::style::{
+use deckcraft_color::{ColorTransform, Rgba, SchemeSlot};
+use deckcraft_geom::Xfrm;
+use deckcraft_model::anim::{AnimClass, AnimStart, Animation, TextBuild, Transition};
+use deckcraft_model::chart::{Chart, ChartType};
+use deckcraft_model::style::{
     ColorRef, Dash, Effects, Fill, Glow, Gradient, GradientShape, GradientStop, Line, LineEnd, PatternFill, PictureAdjust, PictureFill, PictureMode,
     Shadow,
 };
-use slidecraft_model::table::Table;
-use slidecraft_model::text::{
+use deckcraft_model::table::Table;
+use deckcraft_model::text::{
     Action, Align, Anchor, AutoFit, BodyProps, Bullet, Caps, Hyperlink, Paragraph, Run, RunKind, RunProps, Spacing, Strike, TextBody,
 };
-use slidecraft_model::{
+use deckcraft_model::{
     Background, Comment, CustomPath, CustomShow, Geom, InkStroke, MediaClip, Presentation, Section, Shape, ShapeId, ShapeKind, Slide, SlideId,
     defaults,
 };
@@ -31,7 +31,7 @@ fn shape(p: &mut Presentation, name: &str, x: f64, y: f64, w: f64, h: f64) -> Sh
 }
 
 fn new_slide(p: &mut Presentation, title: &str) -> Slide {
-    let layout = defaults::layout_of_kind(p, slidecraft_model::LayoutType::TitleOnly).unwrap_or_default();
+    let layout = defaults::layout_of_kind(p, deckcraft_model::LayoutType::TitleOnly).unwrap_or_default();
     let mut s = defaults::new_slide(p, layout);
     if let Some(t) = s.shapes.first_mut() {
         t.text = Some(TextBody::from_text(title));
@@ -43,7 +43,7 @@ fn new_slide(p: &mut Presentation, title: &str) -> Slide {
 pub fn rich_deck() -> Presentation {
     let mut p = defaults::new_presentation(None);
     p.props.title = "Rich deck".into();
-    p.props.author = "SlideCraft tests".into();
+    p.props.author = "DeckCraft tests".into();
     p.props.created = "2025-01-02T03:04:05Z".into();
     let img = p.add_media("image1.png", "image/png", png(40, 30, [200, 40, 40]));
     let img2 = p.add_media("image2.png", "image/png", png(8, 8, [20, 140, 220]));
@@ -139,7 +139,7 @@ pub fn rich_deck() -> Presentation {
     b.text = Some(TextBody {
         body: BodyProps { anchor: Some(Anchor::Bottom), inset_l: Some(10.0), wrap: Some(false), autofit: Some(AutoFit::Shape), ..Default::default() },
         paragraphs: vec![Paragraph {
-            props: slidecraft_model::text::ParaProps {
+            props: deckcraft_model::text::ParaProps {
                 align: Some(Align::Right),
                 line_spacing: Some(Spacing::Pct(1.5)),
                 space_before: Some(Spacing::Pts(6.0)),
@@ -159,7 +159,7 @@ pub fn rich_deck() -> Presentation {
             w: 100000.0,
             h: 100000.0,
             d: "M 0 0 L 100000 0 L 50000 100000 Z".into(),
-            fill: slidecraft_geom::preset::FillMode::Norm,
+            fill: deckcraft_geom::preset::FillMode::Norm,
             stroke: true,
         }],
     };
@@ -325,7 +325,7 @@ pub fn rich_deck() -> Presentation {
     p.slides.push(Arc::new(s));
 
     // Slide 6: bulleted content with a by-paragraph build, a slide link and an equation.
-    let layout = defaults::layout_of_kind(&p, slidecraft_model::LayoutType::TitleAndContent).unwrap_or_default();
+    let layout = defaults::layout_of_kind(&p, deckcraft_model::LayoutType::TitleAndContent).unwrap_or_default();
     let mut s = defaults::new_slide(&mut p, layout);
     s.shapes[0].text = Some(TextBody::from_text("Build"));
     s.shapes[1].text = Some(TextBody::from_text("One\nTwo\nThree"));
@@ -361,13 +361,13 @@ pub fn rich_deck() -> Presentation {
 }
 
 fn round(p: &Presentation) -> Presentation {
-    let bytes = slidecraft_pptx::export(p).expect("export");
-    slidecraft_pptx::import(&bytes).expect("import")
+    let bytes = deckcraft_pptx::export(p).expect("export");
+    deckcraft_pptx::import(&bytes).expect("import")
 }
 
 fn by_name<'a>(s: &'a Slide, name: &str) -> &'a Shape {
     let mut found = None;
-    slidecraft_model::walk(&s.shapes, &mut |x, _| {
+    deckcraft_model::walk(&s.shapes, &mut |x, _| {
         if found.is_none() && x.name == name {
             found = Some(x);
         }
@@ -378,8 +378,8 @@ fn by_name<'a>(s: &'a Slide, name: &str) -> &'a Shape {
 #[test]
 fn rich_deck_writes_to_dir() {
     let p = rich_deck();
-    let bytes = slidecraft_pptx::export(&p).expect("export");
-    if let Ok(dir) = std::env::var("SLIDECRAFT_PPTX_OUT") {
+    let bytes = deckcraft_pptx::export(&p).expect("export");
+    if let Ok(dir) = std::env::var("DECKCRAFT_PPTX_OUT") {
         std::fs::write(format!("{dir}/rich.pptx"), &bytes).expect("write");
     }
     assert!(bytes.len() > 1000);
@@ -394,7 +394,7 @@ fn deck_level_round_trip() {
     assert_eq!(q.slide_size, p.slide_size);
     assert_eq!(q.first_slide_number, 0);
     assert_eq!(q.props.title, "Rich deck");
-    assert_eq!(q.props.author, "SlideCraft tests");
+    assert_eq!(q.props.author, "DeckCraft tests");
     assert_eq!(q.props.created, "2025-01-02T03:04:05Z");
     assert_eq!(
         q.sections.iter().map(|s| (s.name.clone(), s.slides.len())).collect::<Vec<_>>(),
@@ -585,7 +585,7 @@ fn every_transition_kind_survives() {
     let mut p = defaults::new_presentation(None);
     let base = p.slides[0].as_ref().clone();
     p.slides.clear();
-    for (kind, ..) in slidecraft_model::anim::TRANSITIONS {
+    for (kind, ..) in deckcraft_model::anim::TRANSITIONS {
         let mut s = base.clone();
         s.id = SlideId(p.alloc_id());
         s.transition = Some(Transition { kind: kind.to_string(), duration_ms: 1200, ..Default::default() });
@@ -610,7 +610,7 @@ fn every_animation_effect_survives() {
     sh.text = Some(TextBody::from_text("hi"));
     let id = sh.id;
     s.shapes.push(sh);
-    for (effect, _, class, _, dur, opts) in slidecraft_model::anim::ANIMATIONS {
+    for (effect, _, class, _, dur, opts) in deckcraft_model::anim::ANIMATIONS {
         s.animations.push(Animation {
             shape: id,
             class: *class,
@@ -626,17 +626,17 @@ fn every_animation_effect_survives() {
     assert_eq!(a.len(), b.len());
     for (x, y) in a.iter().zip(b.iter()) {
         // Effects sharing a preset number come back as the first effect with that number.
-        let same_preset = slidecraft_model::anim::animation_info(&x.effect, x.class).map(|i| i.3)
-            == slidecraft_model::anim::animation_info(&y.effect, y.class).map(|i| i.3);
+        let same_preset = deckcraft_model::anim::animation_info(&x.effect, x.class).map(|i| i.3)
+            == deckcraft_model::anim::animation_info(&y.effect, y.class).map(|i| i.3);
         assert!(x.effect == y.effect || same_preset, "{} vs {}", x.effect, y.effect);
         assert_eq!(x.class, y.class);
     }
 }
 
-/// Writes bisection variants of the rich deck to `SLIDECRAFT_PPTX_BISECT` (manual checks).
+/// Writes bisection variants of the rich deck to `DECKCRAFT_PPTX_BISECT` (manual checks).
 #[test]
 fn bisect_variants() {
-    let Ok(dir) = std::env::var("SLIDECRAFT_PPTX_BISECT") else { return };
+    let Ok(dir) = std::env::var("DECKCRAFT_PPTX_BISECT") else { return };
     let p = rich_deck();
     let n = p.slides.len();
     for i in 0..n {
@@ -644,7 +644,7 @@ fn bisect_variants() {
         q.slides = vec![p.slides[i].clone()];
         q.sections.clear();
         q.custom_shows.clear();
-        std::fs::write(format!("{dir}/bis-slide{i}.pptx"), slidecraft_pptx::export(&q).expect("export")).expect("write");
+        std::fs::write(format!("{dir}/bis-slide{i}.pptx"), deckcraft_pptx::export(&q).expect("export")).expect("write");
     }
     let mut q = p.clone();
     q.sections.clear();
@@ -653,14 +653,14 @@ fn bisect_variants() {
     for s in q.slides.iter_mut() {
         Arc::make_mut(s).comments.clear();
     }
-    std::fs::write(format!("{dir}/bis-nodeck.pptx"), slidecraft_pptx::export(&q).expect("export")).expect("write");
+    std::fs::write(format!("{dir}/bis-nodeck.pptx"), deckcraft_pptx::export(&q).expect("export")).expect("write");
 }
 
-/// Finer bisection of one slide (`SLIDECRAFT_PPTX_BISECT_SLIDE=<index>`): one variant per removed shape,
+/// Finer bisection of one slide (`DECKCRAFT_PPTX_BISECT_SLIDE=<index>`): one variant per removed shape,
 /// plus no animations / no transition.
 #[test]
 fn bisect_slide_variants() {
-    let (Ok(dir), Ok(idx)) = (std::env::var("SLIDECRAFT_PPTX_BISECT"), std::env::var("SLIDECRAFT_PPTX_BISECT_SLIDE")) else { return };
+    let (Ok(dir), Ok(idx)) = (std::env::var("DECKCRAFT_PPTX_BISECT"), std::env::var("DECKCRAFT_PPTX_BISECT_SLIDE")) else { return };
     let p = rich_deck();
     let i: usize = idx.parse().expect("index");
     let base = p.slides[i].as_ref().clone();
@@ -669,7 +669,7 @@ fn bisect_slide_variants() {
         q.slides = vec![Arc::new(s)];
         q.sections.clear();
         q.custom_shows.clear();
-        slidecraft_pptx::export(&q).expect("export")
+        deckcraft_pptx::export(&q).expect("export")
     };
     let mut s = base.clone();
     s.animations.clear();

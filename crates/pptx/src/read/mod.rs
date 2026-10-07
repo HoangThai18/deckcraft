@@ -11,9 +11,9 @@ pub(crate) use chart::{chart_from as chart_from_el, read_chart_xml};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use slidecraft_geom::{Size, emu_to_pt};
-use slidecraft_model::text::TextBody;
-use slidecraft_model::{
+use deckcraft_geom::{Size, emu_to_pt};
+use deckcraft_model::text::TextBody;
+use deckcraft_model::{
     Background, Comment, CustomShow, HeaderFooter, Layout, LayoutId, LayoutType, Master, MasterId, MediaId, MediaItem, PhType, Presentation,
     Properties, Section, ShowSettings, Slide, SlideId, defaults,
 };
@@ -422,12 +422,12 @@ pub fn color_map(cm: &El) -> Vec<(String, String)> {
 fn background(imp: &mut Imp, part: &Part, csld: &El) -> Option<Background> {
     let bg = csld.child("bg")?;
     if let Some(pr) = bg.child("bgPr") {
-        return Some(Background::Fill { fill: dml::fill_of(imp, part, pr).unwrap_or(slidecraft_model::Fill::None) });
+        return Some(Background::Fill { fill: dml::fill_of(imp, part, pr).unwrap_or(deckcraft_model::Fill::None) });
     }
     let r = bg.child("bgRef")?;
     Some(Background::Ref {
         idx: r.u32("idx").unwrap_or(1001),
-        color: dml::color(r).unwrap_or(slidecraft_model::ColorRef::scheme(slidecraft_color::SchemeSlot::Bg1)),
+        color: dml::color(r).unwrap_or(deckcraft_model::ColorRef::scheme(deckcraft_color::SchemeSlot::Bg1)),
     })
 }
 
@@ -641,7 +641,7 @@ fn read_show(sp: &El, shows: &HashMap<String, String>) -> ShowSettings {
         s.custom_show = Some(shows.get(id).cloned().unwrap_or_else(|| id.to_string()));
     }
     if let Some(c) = sp.child("penClr").and_then(dml::color)
-        && let slidecraft_model::ColorBase::Rgb { rgb } = c.base
+        && let deckcraft_model::ColorBase::Rgb { rgb } = c.base
     {
         s.pen_color = rgb;
     }
@@ -677,7 +677,7 @@ fn header_footer(p: &Presentation) -> HeaderFooter {
                 Some(PhType::Date) => {
                     hf.date = true;
                     if let Some(t) = &sh.text
-                        && !t.paragraphs.iter().flat_map(|p| &p.runs).any(|r| matches!(r.kind, slidecraft_model::text::RunKind::Field { .. }))
+                        && !t.paragraphs.iter().flat_map(|p| &p.runs).any(|r| matches!(r.kind, deckcraft_model::text::RunKind::Field { .. }))
                         && hf.date_text.is_empty()
                     {
                         hf.date_text = t.text();

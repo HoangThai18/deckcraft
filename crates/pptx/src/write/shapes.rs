@@ -2,10 +2,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use slidecraft_geom::Xfrm;
-use slidecraft_model::style::Fill;
-use slidecraft_model::table::Table;
-use slidecraft_model::{Geom, PhType, Shape, ShapeId, ShapeKind, ShapeStyle, walk};
+use deckcraft_geom::Xfrm;
+use deckcraft_model::style::Fill;
+use deckcraft_model::table::Table;
+use deckcraft_model::{Geom, PhType, Shape, ShapeId, ShapeKind, ShapeStyle, walk};
 
 use super::dml::{self, emu, emu_pos};
 use super::{Exp, Out};
@@ -94,7 +94,7 @@ pub fn geometry(w: &mut W, g: &Geom) {
                 w.empty0("a:avLst");
             } else {
                 // PowerPoint wants the complete guide list once any is given.
-                let defaults = slidecraft_geom::preset::info(name).map(|i| i.defaults).unwrap_or(&[]);
+                let defaults = deckcraft_geom::preset::info(name).map(|i| i.defaults).unwrap_or(&[]);
                 let mut vals: Vec<f64> = adj.iter().take(16).copied().collect();
                 while vals.len() < defaults.len() {
                     vals.push(defaults.get(vals.len()).copied().unwrap_or(0.0));
@@ -384,7 +384,7 @@ pub fn shape(w: &mut W, x: &mut Exp, o: &mut Out, cx: &mut Ctx, s: &Shape, depth
     }
 }
 
-fn ink_shape(st: &slidecraft_model::InkStroke, i: usize) -> Option<Shape> {
+fn ink_shape(st: &deckcraft_model::InkStroke, i: usize) -> Option<Shape> {
     let pts: Vec<(f64, f64)> = st.points.iter().filter(|p| p.0.is_finite() && p.1.is_finite()).map(|p| (p.0, p.1)).collect();
     let (x0, y0) = pts.iter().fold((f64::MAX, f64::MAX), |a, p| (a.0.min(p.0), a.1.min(p.1)));
     let (x1, y1) = pts.iter().fold((f64::MIN, f64::MIN), |a, p| (a.0.max(p.0), a.1.max(p.1)));
@@ -397,20 +397,20 @@ fn ink_shape(st: &slidecraft_model::InkStroke, i: usize) -> Option<Shape> {
         d.push_str(if k == 0 { "M " } else { "L " });
         d.push_str(&format!("{:.2} {:.2} ", px - x0, py - y0));
     }
-    let mut c = slidecraft_model::style::ColorRef::rgb(st.color.with_alpha(255));
+    let mut c = deckcraft_model::style::ColorRef::rgb(st.color.with_alpha(255));
     if st.highlighter {
-        c = c.with(slidecraft_color::ColorTransform::Alpha(50_000));
+        c = c.with(deckcraft_color::ColorTransform::Alpha(50_000));
     }
     Some(Shape {
         id: ShapeId(0),
         name: format!("Ink {}", i + 1),
         xfrm: Some(Xfrm::new(x0, y0, w, h)),
-        geom: Geom::Custom { paths: vec![slidecraft_model::CustomPath { w, h, d, fill: slidecraft_geom::preset::FillMode::None, stroke: true }] },
+        geom: Geom::Custom { paths: vec![deckcraft_model::CustomPath { w, h, d, fill: deckcraft_geom::preset::FillMode::None, stroke: true }] },
         fill: Some(Fill::None),
-        line: Some(slidecraft_model::Line {
-            cap: Some(slidecraft_model::style::LineCap::Round),
-            join: Some(slidecraft_model::style::LineJoin::Round),
-            ..slidecraft_model::Line::solid(c, st.width.max(0.25))
+        line: Some(deckcraft_model::Line {
+            cap: Some(deckcraft_model::style::LineCap::Round),
+            join: Some(deckcraft_model::style::LineJoin::Round),
+            ..deckcraft_model::Line::solid(c, st.width.max(0.25))
         }),
         ..Default::default()
     })
@@ -520,7 +520,7 @@ fn table(w: &mut W, x: &mut Exp, o: &mut Out, t: &Table) {
             a = a.o("vert", c.vertical.map(|v| v.xml())).o(
                 "anchor",
                 c.anchor.map(|a| match a {
-                    slidecraft_model::text::Anchor::Justified | slidecraft_model::text::Anchor::Distributed => "t",
+                    deckcraft_model::text::Anchor::Justified | deckcraft_model::text::Anchor::Distributed => "t",
                     other => other.xml(),
                 }),
             );
@@ -551,7 +551,7 @@ fn table(w: &mut W, x: &mut Exp, o: &mut Out, t: &Table) {
     w.close("a:tbl");
 }
 
-fn media(w: &mut W, x: &mut Exp, o: &mut Out, id: u32, s: &Shape, m: &slidecraft_model::MediaClip) {
+fn media(w: &mut W, x: &mut Exp, o: &mut Out, id: u32, s: &Shape, m: &deckcraft_model::MediaClip) {
     let kind = if m.video { "video" } else { "audio" };
     let link = x.media_rel(o, m.media, kind);
     let embed = x.media_rel_new(o, m.media, crate::opc::RT_MEDIA);
@@ -559,8 +559,8 @@ fn media(w: &mut W, x: &mut Exp, o: &mut Out, id: u32, s: &Shape, m: &slidecraft
     w.open0("p:nvPicPr");
     let mut s2 = s.clone();
     if s2.click.is_none() {
-        s2.click = Some(slidecraft_model::text::Hyperlink {
-            action: slidecraft_model::text::Action::PlayMedia,
+        s2.click = Some(deckcraft_model::text::Hyperlink {
+            action: deckcraft_model::text::Action::PlayMedia,
             tooltip: String::new(),
             highlight_click: false,
         });
@@ -603,7 +603,7 @@ fn media(w: &mut W, x: &mut Exp, o: &mut Out, id: u32, s: &Shape, m: &slidecraft
     }
     w.close("p:nvPr");
     w.close("p:nvPicPr");
-    let poster = slidecraft_model::style::PictureFill { media: m.poster.unwrap_or_default(), ..Default::default() };
+    let poster = deckcraft_model::style::PictureFill { media: m.poster.unwrap_or_default(), ..Default::default() };
     dml::blip_fill(w, x, o, "p:blipFill", &poster);
     let mut s3 = s.clone();
     s3.fill = None;
@@ -612,7 +612,7 @@ fn media(w: &mut W, x: &mut Exp, o: &mut Out, id: u32, s: &Shape, m: &slidecraft
 }
 
 #[allow(clippy::too_many_arguments)]
-fn opaque(w: &mut W, x: &mut Exp, o: &mut Out, cx: &mut Ctx, s: &Shape, xml: &str, preview: Option<slidecraft_model::MediaId>, label: &str) {
+fn opaque(w: &mut W, x: &mut Exp, o: &mut Out, cx: &mut Ctx, s: &Shape, xml: &str, preview: Option<deckcraft_model::MediaId>, label: &str) {
     // Kept XML that references no relationships can be written back as it was.
     if let Ok(doc) = crate::xml::parse(xml.as_bytes())
         && !crate::read::has_rel_refs(&doc.root)
@@ -632,7 +632,7 @@ fn opaque(w: &mut W, x: &mut Exp, o: &mut Out, cx: &mut Ctx, s: &Shape, xml: &st
     }
     match preview {
         Some(m) if x.p.media(m).is_some() => {
-            p.kind = ShapeKind::Picture { fill: slidecraft_model::style::PictureFill { media: m, ..Default::default() } };
+            p.kind = ShapeKind::Picture { fill: deckcraft_model::style::PictureFill { media: m, ..Default::default() } };
             p.ph = None;
             shape_with_id(w, x, o, cx, &p, id);
         }

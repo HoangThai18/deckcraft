@@ -1,12 +1,12 @@
 //! DrawingML reading: colours, fills, lines, effects, transforms and text.
 
-use slidecraft_color::{ColorTransform, Rgba, SchemeSlot};
-use slidecraft_geom::{Xfrm, emu_to_pt};
-use slidecraft_model::style::{
+use deckcraft_color::{ColorTransform, Rgba, SchemeSlot};
+use deckcraft_geom::{Xfrm, emu_to_pt};
+use deckcraft_model::style::{
     ColorBase, ColorRef, Compound, Dash, Effects, Fill, Glow, Gradient, GradientShape, GradientStop, Line, LineCap, LineEnd, LineJoin, PatternFill,
     PictureFill, PictureMode, Reflection, Shadow,
 };
-use slidecraft_model::text::{
+use deckcraft_model::text::{
     Action, Align, Anchor, AutoFit, BodyProps, Bullet, Caps, Hyperlink, LevelStyle, ListStyle, ParaProps, Paragraph, Run, RunKind, RunProps, Spacing,
     Strike, TabStop, TextBody, TextDir,
 };
@@ -165,7 +165,7 @@ pub fn blip_fill(imp: &mut Imp, part: &Part, bf: &El) -> Option<PictureFill> {
 }
 
 /// Media for an element with `r:embed` (or `r:link`).
-pub fn media_ref(imp: &mut Imp, part: &Part, b: &El) -> Option<slidecraft_model::MediaId> {
+pub fn media_ref(imp: &mut Imp, part: &Part, b: &El) -> Option<deckcraft_model::MediaId> {
     if let Some(id) = b.attr("r:embed").filter(|s| !s.is_empty())
         && let Some(r) = part.rels.get(id)
     {

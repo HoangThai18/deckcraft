@@ -1,7 +1,7 @@
 //! File menu: new, open, save, export, close, properties.
 
+use deckcraft_model::{Presentation, defaults};
 use serde_json::{Value, json};
-use slidecraft_model::{Presentation, defaults};
 
 use super::*;
 use crate::{DocState, EngineError, Result, Session};
@@ -11,11 +11,11 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(noundo "file.new", "New Presentation", ["File"], Some("Cmd+N"), "{theme?: name, size?: [w,h] pt, blank?: bool}", always, new),
         cmd!(noundo "file.open", "Open…", ["File"], Some("Cmd+O"), "{path}", always, open),
         cmd!(noundo "file.openBytes", "Open Data", [], None, "{name, data: base64}", always, open_bytes),
-        cmd!(noundo "file.save", "Save", ["File"], Some("Cmd+S"), "{path?, format?: slidecraft|pptx}", has_doc, save),
+        cmd!(noundo "file.save", "Save", ["File"], Some("Cmd+S"), "{path?, format?: deckcraft|pptx}", has_doc, save),
         cmd!(noundo "file.saveAs", "Save As…", ["File"], Some("Cmd+Shift+S"), "{path, format?}", has_doc, save_as),
         cmd!(noundo "file.saveTemplate", "Save as Template…", ["File"], None, "{path}", has_doc, save_as),
-        cmd!(query "file.saveBytes", "Save to Data", [], None, "{format?: slidecraft|pptx} → {data: base64}", has_doc, save_bytes_cmd),
-        cmd!(noundo "file.export", "Export…", ["File"], None, "{path, format: png|jpeg|pptx|slidecraft|outline|pdf, slide?: index, all?: bool, scale?: px per pt; pdf: layout?: slides|notes|handouts, perPage?: 1|2|3|4|6|9, dpi?, slides?: [index], includeHidden?, textLayer?, frame?}", has_doc, export),
+        cmd!(query "file.saveBytes", "Save to Data", [], None, "{format?: deckcraft|pptx} → {data: base64}", has_doc, save_bytes_cmd),
+        cmd!(noundo "file.export", "Export…", ["File"], None, "{path, format: png|jpeg|pptx|deckcraft|outline|pdf, slide?: index, all?: bool, scale?: px per pt; pdf: layout?: slides|notes|handouts, perPage?: 1|2|3|4|6|9, dpi?, slides?: [index], includeHidden?, textLayer?, frame?}", has_doc, export),
         cmd!(query "file.render", "Render Slide", [], None, "{slide?: index, scale?, edit?: bool} → {png: base64, width, height}", has_doc, render),
         cmd!(noundo "file.close", "Close", ["File"], Some("Cmd+W"), "{}", has_doc, close),
         cmd!(
@@ -36,8 +36,8 @@ pub fn specs() -> Vec<CommandSpec> {
     ]
 }
 
-fn theme_named(name: &str) -> Option<slidecraft_model::Theme> {
-    slidecraft_model::theme::builtin_themes().into_iter().find(|t| t.name.eq_ignore_ascii_case(name))
+fn theme_named(name: &str) -> Option<deckcraft_model::Theme> {
+    deckcraft_model::theme::builtin_themes().into_iter().find(|t| t.name.eq_ignore_ascii_case(name))
 }
 
 fn new(s: &mut Session, p: &Value) -> Result<Value> {
@@ -45,7 +45,7 @@ fn new(s: &mut Session, p: &Value) -> Result<Value> {
     let size = p
         .get("size")
         .and_then(Value::as_array)
-        .and_then(|a| Some(slidecraft_geom::Size::new(a.first()?.as_f64()?, a.get(1)?.as_f64()?)))
+        .and_then(|a| Some(deckcraft_geom::Size::new(a.first()?.as_f64()?, a.get(1)?.as_f64()?)))
         .filter(|s| s.width >= 1.0 && s.height >= 1.0 && s.width < 5000.0 && s.height < 5000.0)
         .unwrap_or(defaults::WIDE);
     let doc = defaults::blank_presentation(size, theme, !bool_or(p, "blank", false));
@@ -56,25 +56,25 @@ fn new(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// Recognise and read presentation bytes (native, PPTX).
 pub fn open_presentation(name: &str, bytes: &[u8]) -> Result<Presentation> {
-    if slidecraft_format::sniff(bytes) {
-        return slidecraft_format::load(bytes).map_err(|e| EngineError::Other(e.to_string()));
+    if deckcraft_format::sniff(bytes) {
+        return deckcraft_format::load(bytes).map_err(|e| EngineError::Other(e.to_string()));
     }
-    if slidecraft_pptx::sniff(bytes) {
-        let mut p = slidecraft_pptx::import(bytes).map_err(|e| EngineError::Other(e.to_string()))?;
-        slidecraft_format::repair(&mut p);
+    if deckcraft_pptx::sniff(bytes) {
+        let mut p = deckcraft_pptx::import(bytes).map_err(|e| EngineError::Other(e.to_string()))?;
+        deckcraft_format::repair(&mut p);
         return Ok(p);
     }
     let lower = name.to_ascii_lowercase();
     if lower.ends_with(".txt") || lower.ends_with(".md") {
         let text = String::from_utf8_lossy(bytes);
         let mut p = defaults::blank_presentation(defaults::WIDE, Default::default(), false);
-        slidecraft_format::outline_to_slides(&mut p, &text);
+        deckcraft_format::outline_to_slides(&mut p, &text);
         if p.slides.is_empty() {
             p = defaults::new_presentation(None);
         }
         return Ok(p);
     }
-    Err(EngineError::Other(format!("{name}: not a presentation SlideCraft can read")))
+    Err(EngineError::Other(format!("{name}: not a presentation DeckCraft can read")))
 }
 
 pub fn add_opened(s: &mut Session, name: &str, path: Option<String>, p: Presentation) -> usize {
@@ -87,7 +87,7 @@ fn open(s: &mut Session, p: &Value) -> Result<Value> {
     let path = str_param(p, "path").ok_or_else(|| bad("file.open", "missing `path`"))?;
     let bytes = std::fs::read(path).map_err(|e| EngineError::Other(format!("{path}: {e}")))?;
     let doc = open_presentation(path, &bytes)?;
-    let native = slidecraft_format::sniff(&bytes) || slidecraft_pptx::sniff(&bytes);
+    let native = deckcraft_format::sniff(&bytes) || deckcraft_pptx::sniff(&bytes);
     let i = add_opened(s, path, native.then(|| path.to_string()), doc);
     Ok(json!({"document": i, "slides": s.doc()?.doc.slides.len()}))
 }
@@ -104,24 +104,24 @@ fn open_bytes(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(json!({"document": i}))
 }
 
-/// Encode the presentation in `format` (`slidecraft`, `pptx`, `outline`).
+/// Encode the presentation in `format` (`deckcraft`, `pptx`, `outline`).
 pub fn save_bytes(doc: &Presentation, format: &str) -> Result<Vec<u8>> {
     match format {
-        "pptx" | "potx" | "ppsx" => slidecraft_pptx::export(doc).map_err(|e| EngineError::Other(e.to_string())),
-        "outline" | "txt" => Ok(slidecraft_format::slides_to_outline(doc).into_bytes()),
-        "pdf" => slidecraft_pdf::export(doc, &Default::default()).map_err(|e| EngineError::Other(e.to_string())),
-        _ => slidecraft_format::save(doc).map_err(|e| EngineError::Other(e.to_string())),
+        "pptx" | "potx" | "ppsx" => deckcraft_pptx::export(doc).map_err(|e| EngineError::Other(e.to_string())),
+        "outline" | "txt" => Ok(deckcraft_format::slides_to_outline(doc).into_bytes()),
+        "pdf" => deckcraft_pdf::export(doc, &Default::default()).map_err(|e| EngineError::Other(e.to_string())),
+        _ => deckcraft_format::save(doc).map_err(|e| EngineError::Other(e.to_string())),
     }
 }
 
 /// PDF options from command params: `{layout: slides|notes|handouts, perPage, dpi, slides: [i],
 /// includeHidden, textLayer, frame}`.
-pub fn pdf_options(p: &Value) -> slidecraft_pdf::PdfOptions {
-    let mut o = slidecraft_pdf::PdfOptions { layout: slidecraft_pdf::PageLayout::Slides, ..Default::default() };
+pub fn pdf_options(p: &Value) -> deckcraft_pdf::PdfOptions {
+    let mut o = deckcraft_pdf::PdfOptions { layout: deckcraft_pdf::PageLayout::Slides, ..Default::default() };
     o.layout = match str_param(p, "layout").unwrap_or("slides") {
-        "notes" => slidecraft_pdf::PageLayout::Notes,
-        "handouts" => slidecraft_pdf::PageLayout::Handouts { per_page: usize_param(p, "perPage").unwrap_or(6).min(9) as u8 },
-        _ => slidecraft_pdf::PageLayout::Slides,
+        "notes" => deckcraft_pdf::PageLayout::Notes,
+        "handouts" => deckcraft_pdf::PageLayout::Handouts { per_page: usize_param(p, "perPage").unwrap_or(6).min(9) as u8 },
+        _ => deckcraft_pdf::PageLayout::Slides,
     };
     o.dpi = f64_or(p, "dpi", o.dpi).clamp(36.0, 600.0);
     o.slides = p.get("slides").and_then(Value::as_array).map(|a| a.iter().filter_map(|v| v.as_u64().map(|x| x as usize)).collect());
@@ -133,7 +133,7 @@ pub fn pdf_options(p: &Value) -> slidecraft_pdf::PdfOptions {
 
 /// PDF bytes for `doc` with [`pdf_options`] from `p`.
 pub fn pdf_bytes(doc: &Presentation, p: &Value) -> Result<Vec<u8>> {
-    slidecraft_pdf::export(doc, &pdf_options(p)).map_err(|e| EngineError::Other(e.to_string()))
+    deckcraft_pdf::export(doc, &pdf_options(p)).map_err(|e| EngineError::Other(e.to_string()))
 }
 
 pub fn format_for_path(path: &str) -> &'static str {
@@ -149,7 +149,7 @@ pub fn format_for_path(path: &str) -> &'static str {
     } else if l.ends_with(".txt") || l.ends_with(".md") {
         "outline"
     } else {
-        "slidecraft"
+        "deckcraft"
     }
 }
 
@@ -201,7 +201,7 @@ fn save_as(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn save_bytes_cmd(s: &mut Session, p: &Value) -> Result<Value> {
-    let format = str_param(p, "format").unwrap_or("slidecraft");
+    let format = str_param(p, "format").unwrap_or("deckcraft");
     let bytes = save_bytes(&s.doc()?.doc, format)?;
     Ok(json!({"data": base64_encode(&bytes), "bytes": bytes.len()}))
 }
@@ -209,7 +209,7 @@ fn save_bytes_cmd(s: &mut Session, p: &Value) -> Result<Value> {
 /// Render slide `index` (current when absent) to PNG bytes.
 pub fn render_png(doc: &Presentation, index: usize, scale: f64, edit: bool) -> (Vec<u8>, u32, u32) {
     let img =
-        slidecraft_render::render_slide(doc, index, &slidecraft_render::RenderOpts { scale: scale.clamp(0.01, 16.0), edit, ..Default::default() });
+        deckcraft_render::render_slide(doc, index, &deckcraft_render::RenderOpts { scale: scale.clamp(0.01, 16.0), edit, ..Default::default() });
     (img.to_png(), img.width, img.height)
 }
 
@@ -240,10 +240,10 @@ fn export(s: &mut Session, p: &Value) -> Result<Value> {
                 if *i >= st.doc.slides.len() {
                     return Err(bad("file.export", format!("no slide {i}")));
                 }
-                let img = slidecraft_render::render_slide(
+                let img = deckcraft_render::render_slide(
                     &st.doc,
                     *i,
-                    &slidecraft_render::RenderOpts { scale: scale.clamp(0.01, 16.0), ..Default::default() },
+                    &deckcraft_render::RenderOpts { scale: scale.clamp(0.01, 16.0), ..Default::default() },
                 );
                 let bytes = if format == "png" { img.to_png() } else { img.to_jpeg(92) };
                 let out = if slides.len() == 1 {
@@ -260,7 +260,7 @@ fn export(s: &mut Session, p: &Value) -> Result<Value> {
             Ok(json!({"files": written}))
         }
         "pdf" => {
-            let bytes = slidecraft_pdf::export(&st.doc, &pdf_options(p)).map_err(|e| EngineError::Other(e.to_string()))?;
+            let bytes = deckcraft_pdf::export(&st.doc, &pdf_options(p)).map_err(|e| EngineError::Other(e.to_string()))?;
             write_file(&path, &bytes)?;
             Ok(json!({"path": path, "bytes": bytes.len()}))
         }

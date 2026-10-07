@@ -1,4 +1,4 @@
-//! The SlideCraft document model.
+//! The DeckCraft document model.
 //!
 //! A [`Presentation`] has slide masters (each with a theme and layouts) and slides. Each slide
 //! uses a layout; placeholders on a slide inherit position, formatting and text styles from the
@@ -19,9 +19,9 @@ pub mod theme;
 
 use std::sync::Arc;
 
+pub use deckcraft_color::{ColorScheme, ColorTransform, Rgba, SchemeSlot};
+pub use deckcraft_geom::{Rect, Size, Xfrm};
 use serde::{Deserialize, Serialize};
-pub use slidecraft_color::{ColorScheme, ColorTransform, Rgba, SchemeSlot};
-pub use slidecraft_geom::{Rect, Size, Xfrm};
 
 pub use anim::{AnimClass, AnimStart, Animation, Transition};
 pub use chart::Chart;
@@ -208,13 +208,13 @@ pub struct CustomPath {
     pub h: f64,
     /// `M x y`, `L x y`, `C x1 y1 x2 y2 x y`, `Q x1 y1 x y`, `Z`.
     pub d: String,
-    pub fill: slidecraft_geom::preset::FillMode,
+    pub fill: deckcraft_geom::preset::FillMode,
     pub stroke: bool,
 }
 
 impl Default for CustomPath {
     fn default() -> Self {
-        CustomPath { w: 0.0, h: 0.0, d: String::new(), fill: slidecraft_geom::preset::FillMode::Norm, stroke: true }
+        CustomPath { w: 0.0, h: 0.0, d: String::new(), fill: deckcraft_geom::preset::FillMode::Norm, stroke: true }
     }
 }
 
@@ -371,7 +371,7 @@ impl Shape {
     }
     /// Is this a line-like shape (no area)?
     pub fn is_line(&self) -> bool {
-        matches!(self.kind, ShapeKind::Connector { .. }) || self.geom.preset_name().is_some_and(slidecraft_geom::preset::is_line_like)
+        matches!(self.kind, ShapeKind::Connector { .. }) || self.geom.preset_name().is_some_and(deckcraft_geom::preset::is_line_like)
     }
     pub fn kind_name(&self) -> &'static str {
         match &self.kind {

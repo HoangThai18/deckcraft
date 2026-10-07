@@ -1,11 +1,11 @@
 //! Laid-out text and click areas of a slide, in slide coordinates, without drawing — for exports
 //! that put real text over a raster (PDF text layer, links) and for text extraction.
 
+use deckcraft_model::resolve::{self, Ctx};
+use deckcraft_model::text::{Hyperlink, TextBody};
+use deckcraft_model::{Presentation, Shape, ShapeKind};
+use deckcraft_text::{Opts, TextLayout};
 use kurbo::{Affine, Rect};
-use slidecraft_model::resolve::{self, Ctx};
-use slidecraft_model::text::{Hyperlink, TextBody};
-use slidecraft_model::{Presentation, Shape, ShapeKind};
-use slidecraft_text::{Opts, TextLayout};
 
 use crate::{SlideFields, shape_geometry};
 
@@ -71,7 +71,7 @@ fn place(out: &mut Placed, rctx: &Ctx, fields: &SlideFields, s: &Shape, parent: 
     match &s.kind {
         ShapeKind::Group { children, child } => {
             let ch = Rect::new(child.x, child.y, child.x + child.w, child.y + child.h);
-            let gm = parent * slidecraft_geom::group_child_affine(&x, ch);
+            let gm = parent * deckcraft_geom::group_child_affine(&x, ch);
             for c in children {
                 place(out, rctx, fields, c, gm, depth + 1);
             }
@@ -80,7 +80,7 @@ fn place(out: &mut Placed, rctx: &Ctx, fields: &SlideFields, s: &Shape, parent: 
         _ => {
             let Some(body) = s.text.as_ref().filter(|b| !b.is_empty()) else { return };
             let tr = shape_geometry(s, x.w, x.h).text_rect;
-            let layout = slidecraft_text::layout(rctx, s, body, &Opts { rect: tr, fields, prompt_color: None, no_shrink: false });
+            let layout = deckcraft_text::layout(rctx, s, body, &Opts { rect: tr, fields, prompt_color: None, no_shrink: false });
             let m = if layout.rotation != 0.0 {
                 let c = tr.center().to_vec2();
                 m * Affine::translate(c) * Affine::rotate(layout.rotation.to_radians()) * Affine::translate(-c)

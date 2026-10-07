@@ -1,8 +1,8 @@
 //! cpal audio output for media playback: the device pulls mixed samples from the
-//! `slidecraft_media::Player`, which makes it the playback clock video frames follow.
+//! `deckcraft_media::Player`, which makes it the playback clock video frames follow.
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use slidecraft_media::AudioOut;
+use deckcraft_media::AudioOut;
 
 #[derive(Default)]
 pub struct CpalOut {

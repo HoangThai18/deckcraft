@@ -1,7 +1,7 @@
 //! Mappings between our transition / animation ids and PresentationML elements and preset
 //! numbers, shared by the reader and the writer.
 
-use slidecraft_model::anim::{ANIMATIONS, AnimClass};
+use deckcraft_model::anim::{ANIMATIONS, AnimClass};
 
 use crate::xml::{A, El, W};
 
@@ -13,7 +13,7 @@ const SIMPLE: &[(&str, &str, &str)] =
 pub fn transition_from_xml(e: &El) -> Option<(String, String)> {
     let (k, o) = transition_from_xml_raw(e)?;
     // Kinds without options keep none.
-    let has_opts = slidecraft_model::anim::TRANSITIONS.iter().find(|t| t.0 == k).is_none_or(|t| !t.4.is_empty());
+    let has_opts = deckcraft_model::anim::TRANSITIONS.iter().find(|t| t.0 == k).is_none_or(|t| !t.4.is_empty());
     Some((k, if has_opts { o } else { String::new() }))
 }
 
@@ -78,7 +78,7 @@ fn transition_from_xml_raw(e: &El) -> Option<(String, String)> {
         }
         "prstTrans" => {
             let prst = e.attr("prst").unwrap_or("fallOver");
-            let known = slidecraft_model::anim::TRANSITIONS.iter().any(|t| t.0 == prst);
+            let known = deckcraft_model::anim::TRANSITIONS.iter().any(|t| t.0 == prst);
             if !known {
                 return None;
             }
@@ -303,7 +303,7 @@ pub fn fallback_effect(class: AnimClass) -> &'static str {
 }
 
 /// The preset id to write for an animation.
-pub fn preset_for(a: &slidecraft_model::Animation) -> u32 {
+pub fn preset_for(a: &deckcraft_model::Animation) -> u32 {
     if let Some(p) = a.preset_id {
         let consistent = match effect_for_preset(a.class, p) {
             Some(e) => e == a.effect,
@@ -313,7 +313,7 @@ pub fn preset_for(a: &slidecraft_model::Animation) -> u32 {
             return p;
         }
     }
-    match slidecraft_model::anim::animation_info(&a.effect, a.class) {
+    match deckcraft_model::anim::animation_info(&a.effect, a.class) {
         Some(info) if info.2 == a.class => info.3,
         _ => match a.class {
             AnimClass::Entrance | AnimClass::Exit => 10,
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn every_transition_kind_round_trips() {
-        for (kind, _, _, _, opts) in slidecraft_model::anim::TRANSITIONS {
+        for (kind, _, _, _, opts) in deckcraft_model::anim::TRANSITIONS {
             if *kind == "none" {
                 continue;
             }

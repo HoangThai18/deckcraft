@@ -1,10 +1,10 @@
-//! SlideCraft desktop app.
+//! DeckCraft desktop app.
 //!
-//! Usage: `slidecraft [--control <port>] [--sample] [--show] [files…]`
+//! Usage: `deckcraft [--control <port>] [--sample] [--show] [files…]`
 //!
-//! `--control <port>` (or `SLIDECRAFT_CONTROL_PORT`) starts a localhost JSON-lines control server:
+//! `--control <port>` (or `DECKCRAFT_CONTROL_PORT`) starts a localhost JSON-lines control server:
 //! `{"id":1,"method":"ui.inspect","params":{}}` → `{"id":1,"ok":true,"result":…}`.
-//! See `slidecraft_ui_egui::control` for the methods.
+//! See `deckcraft_ui_egui::control` for the methods.
 #![cfg_attr(all(target_os = "windows", not(debug_assertions)), windows_subsystem = "windows")]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 #![forbid(unsafe_code)]
@@ -12,8 +12,8 @@
 mod audio;
 mod control_server;
 
-use slidecraft_engine::Session;
-use slidecraft_ui_egui::{Services, SlideApp};
+use deckcraft_engine::Session;
+use deckcraft_ui_egui::{Services, SlideApp};
 
 struct App(SlideApp);
 
@@ -34,38 +34,38 @@ impl eframe::App for App {
 
 fn prefs_path() -> Option<std::path::PathBuf> {
     let base = if cfg!(target_os = "macos") {
-        std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join("Library/Application Support/SlideCraft"))
+        std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join("Library/Application Support/DeckCraft"))
     } else if cfg!(windows) {
-        std::env::var_os("APPDATA").map(|a| std::path::PathBuf::from(a).join("SlideCraft"))
+        std::env::var_os("APPDATA").map(|a| std::path::PathBuf::from(a).join("DeckCraft"))
     } else {
         std::env::var_os("XDG_CONFIG_HOME")
             .map(std::path::PathBuf::from)
             .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".config")))
-            .map(|c| c.join("slidecraft"))
+            .map(|c| c.join("deckcraft"))
     };
     base.map(|b| b.join("ui.json"))
 }
 
 fn load_prefs(app: &mut SlideApp) {
-    if std::env::var_os("SLIDECRAFT_NO_PREFS").is_some() {
+    if std::env::var_os("DECKCRAFT_NO_PREFS").is_some() {
         return;
     }
     if let Some(p) = prefs_path()
         && let Ok(bytes) = std::fs::read(&p)
-        && let Ok(ui) = serde_json::from_slice::<slidecraft_ui_egui::UiState>(&bytes)
+        && let Ok(ui) = serde_json::from_slice::<deckcraft_ui_egui::UiState>(&bytes)
     {
         app.ui = ui;
     }
     if let Some(p) = prefs_path().map(|p| p.with_file_name("prefs.json"))
         && let Ok(bytes) = std::fs::read(&p)
-        && let Ok(prefs) = serde_json::from_slice::<slidecraft_engine::Prefs>(&bytes)
+        && let Ok(prefs) = serde_json::from_slice::<deckcraft_engine::Prefs>(&bytes)
     {
         app.session.prefs = prefs;
     }
 }
 
 fn save_prefs(app: &SlideApp) {
-    if std::env::var_os("SLIDECRAFT_NO_PREFS").is_some() {
+    if std::env::var_os("DECKCRAFT_NO_PREFS").is_some() {
         return;
     }
     if let Some(p) = prefs_path() {
@@ -91,8 +91,8 @@ fn services() -> Services {
                 ),
                 "video" => d.add_filter("Video", &["mp4", "m4v", "mov", "webm", "mkv", "wmv"]),
                 _ => d
-                    .add_filter("Presentations", &["slidecraft", "pptx", "potx", "ppsx"])
-                    .add_filter("SlideCraft", &["slidecraft"])
+                    .add_filter("Presentations", &["deckcraft", "pptx", "potx", "ppsx"])
+                    .add_filter("DeckCraft", &["deckcraft"])
                     .add_filter("PowerPoint", &["pptx", "potx", "ppsx"])
                     .add_filter("Outline", &["txt", "md"]),
             };
@@ -109,23 +109,23 @@ fn services() -> Services {
             rgba.write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png).ok()?;
             Some(out)
         })),
-        // Media is mixed and clocked by the output device; `SLIDECRAFT_NO_AUDIO` plays silently.
-        audio_out: std::env::var_os("SLIDECRAFT_NO_AUDIO")
+        // Media is mixed and clocked by the output device; `DECKCRAFT_NO_AUDIO` plays silently.
+        audio_out: std::env::var_os("DECKCRAFT_NO_AUDIO")
             .is_none()
-            .then(|| Box::new(audio::CpalOut::default()) as Box<dyn slidecraft_media::AudioOut>),
+            .then(|| Box::new(audio::CpalOut::default()) as Box<dyn deckcraft_media::AudioOut>),
         ..Default::default()
     }
 }
 
-const APP_ID: &str = "ai.storyteller.slidecraft";
+const APP_ID: &str = "ai.storyteller.deckcraft";
 
 fn app_icon() -> Option<egui::IconData> {
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/ai.storyteller.slidecraft.png");
+    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/ai.storyteller.deckcraft.png");
     eframe::icon_data::from_png_bytes(png).map_err(|e| log::warn!("app icon: {e}")).ok()
 }
 
 fn main() -> eframe::Result {
-    let mut control_port: Option<u16> = std::env::var("SLIDECRAFT_CONTROL_PORT").ok().and_then(|p| p.parse().ok());
+    let mut control_port: Option<u16> = std::env::var("DECKCRAFT_CONTROL_PORT").ok().and_then(|p| p.parse().ok());
     let mut files = Vec::new();
     let mut sample = false;
     let mut show = false;
@@ -136,7 +136,7 @@ fn main() -> eframe::Result {
             "--sample" => sample = true,
             "--show" => show = true,
             "--version" => {
-                println!("slidecraft {}", env!("CARGO_PKG_VERSION"));
+                println!("deckcraft {}", env!("CARGO_PKG_VERSION"));
                 return Ok(());
             }
             _ => files.push(a),
@@ -144,7 +144,7 @@ fn main() -> eframe::Result {
     }
     let mut options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("SlideCraft")
+            .with_title("DeckCraft")
             .with_inner_size([1440.0, 900.0])
             .with_min_inner_size([900.0, 560.0])
             .with_drag_and_drop(true)
@@ -158,21 +158,21 @@ fn main() -> eframe::Result {
         options.viewport = options.viewport.with_icon(icon);
     }
     #[cfg(all(unix, not(target_os = "macos")))]
-    if std::env::var_os("DISPLAY").is_some() && std::env::var_os("SLIDECRAFT_WAYLAND").is_none() {
+    if std::env::var_os("DISPLAY").is_some() && std::env::var_os("DECKCRAFT_WAYLAND").is_none() {
         options.event_loop_builder = Some(Box::new(|b| {
             use winit::platform::x11::EventLoopBuilderExtX11;
             b.with_x11();
         }));
     }
     eframe::run_native(
-        "SlideCraft",
+        "DeckCraft",
         options,
         Box::new(move |cc| {
             let mut app = SlideApp::new(Session::new(), services());
             load_prefs(&mut app);
             // AutoRecover: reopen what a previous run left unsaved, then keep it current.
-            if std::env::var_os("SLIDECRAFT_NO_RECOVERY").is_none() {
-                app.session.recovery_dir = slidecraft_engine::recovery::default_dir();
+            if std::env::var_os("DECKCRAFT_NO_RECOVERY").is_none() {
+                app.session.recovery_dir = deckcraft_engine::recovery::default_dir();
                 if let Ok(v) = app.session.execute("file.recovery.open", &serde_json::json!({}))
                     && let Some(n) = v.get("opened").and_then(|o| o.as_array()).map(Vec::len).filter(|n| *n > 0)
                 {
@@ -184,12 +184,12 @@ fn main() -> eframe::Result {
                 let rx = control_server::start(port, cc.egui_ctx.clone());
                 app = app.with_control(rx);
             }
-            if sample && let Err(e) = slidecraft_engine::sample::open_sample(&mut app.session) {
-                eprintln!("slidecraft: sample: {e}");
+            if sample && let Err(e) = deckcraft_engine::sample::open_sample(&mut app.session) {
+                eprintln!("deckcraft: sample: {e}");
             }
             for f in files {
                 if let Err(e) = app.open_path(&f) {
-                    eprintln!("slidecraft: {f}: {e}");
+                    eprintln!("deckcraft: {f}: {e}");
                 }
             }
             if show {

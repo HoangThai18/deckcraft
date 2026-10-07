@@ -1,6 +1,6 @@
 [package]
-name = "slidecraft-web"
-description = "SlideCraft in the browser (eframe web runner, WebGPU with WebGL2 fallback)"
+name = "deckcraft-web"
+description = "DeckCraft in the browser (eframe web runner, WebGPU with WebGL2 fallback)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,12 +10,12 @@ publish = false
 workspace = true
 
 [[bin]]
-name = "slidecraft-web"
+name = "deckcraft-web"
 path = "src/main.rs"
 
 [dependencies]
-slidecraft-engine = { workspace = true }
-slidecraft-ui-egui = { workspace = true }
+deckcraft-engine = { workspace = true }
+deckcraft-ui-egui = { workspace = true }
 egui = { workspace = true }
 log = { workspace = true }
 serde_json = { workspace = true }

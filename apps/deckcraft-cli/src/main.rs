@@ -1,23 +1,23 @@
-//! Headless SlideCraft.
+//! Headless DeckCraft.
 //!
 //! ```text
-//! slidecraft-cli info FILE                       # slides, titles, layouts (JSON)
-//! slidecraft-cli render (FILE | --sample) [--slide N | --all] [--scale S] OUT.png|OUT_DIR
-//! slidecraft-cli convert IN OUT                  # .slidecraft ⇄ .pptx, outline .txt, .png (first slide)
-//! slidecraft-cli run [--in FILE | --sample] [--cmd ID[=JSON]]... [--save OUT] [--export OUT] [--print]
-//! slidecraft-cli commands [FILTER]               # list commands (JSON)
-//! slidecraft-cli describe ID                     # one command
-//! slidecraft-cli app [--port PORT] COMMAND [JSON] | --method METHOD [JSON]   # drive the running app
-//! slidecraft-cli mcp [--connect PORT] [--sample] # MCP server over stdio
-//! slidecraft-cli links | --version
+//! deckcraft-cli info FILE                       # slides, titles, layouts (JSON)
+//! deckcraft-cli render (FILE | --sample) [--slide N | --all] [--scale S] OUT.png|OUT_DIR
+//! deckcraft-cli convert IN OUT                  # .deckcraft ⇄ .pptx, outline .txt, .png (first slide)
+//! deckcraft-cli run [--in FILE | --sample] [--cmd ID[=JSON]]... [--save OUT] [--export OUT] [--print]
+//! deckcraft-cli commands [FILTER]               # list commands (JSON)
+//! deckcraft-cli describe ID                     # one command
+//! deckcraft-cli app [--port PORT] COMMAND [JSON] | --method METHOD [JSON]   # drive the running app
+//! deckcraft-cli mcp [--connect PORT] [--sample] # MCP server over stdio
+//! deckcraft-cli links | --version
 //! ```
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 #![forbid(unsafe_code)]
 
 use std::process::ExitCode;
 
+use deckcraft_engine::Session;
 use serde_json::{Value, json};
-use slidecraft_engine::Session;
 
 macro_rules! outln {
     ($($arg:tt)*) => {{
@@ -26,28 +26,28 @@ macro_rules! outln {
             if e.kind() == std::io::ErrorKind::BrokenPipe {
                 std::process::exit(0);
             }
-            eprintln!("slidecraft-cli: can't write to stdout: {e}");
+            eprintln!("deckcraft-cli: can't write to stdout: {e}");
             std::process::exit(1);
         }
     }};
 }
 
-const USAGE: &str = "usage: slidecraft-cli info FILE
-       slidecraft-cli render (FILE | --sample) [--slide N | --all] [--scale S] [--edit] OUT
-       slidecraft-cli convert IN OUT
-       slidecraft-cli run [--in FILE | --sample] [--cmd ID[=JSON]]... [--save OUT] [--export OUT] [--print]
-       slidecraft-cli commands [FILTER]
-       slidecraft-cli describe COMMAND
-       slidecraft-cli app [--port PORT] COMMAND [JSON] | --method METHOD [JSON]
-       slidecraft-cli mcp [--connect PORT] [--sample]
-       slidecraft-cli links | --version";
+const USAGE: &str = "usage: deckcraft-cli info FILE
+       deckcraft-cli render (FILE | --sample) [--slide N | --all] [--scale S] [--edit] OUT
+       deckcraft-cli convert IN OUT
+       deckcraft-cli run [--in FILE | --sample] [--cmd ID[=JSON]]... [--save OUT] [--export OUT] [--print]
+       deckcraft-cli commands [FILTER]
+       deckcraft-cli describe COMMAND
+       deckcraft-cli app [--port PORT] COMMAND [JSON] | --method METHOD [JSON]
+       deckcraft-cli mcp [--connect PORT] [--sample]
+       deckcraft-cli links | --version";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let rest = args.get(1..).unwrap_or(&[]);
     match args.first().map(String::as_str) {
         Some("--version" | "-V" | "version") => {
-            outln!("slidecraft-cli {}", env!("CARGO_PKG_VERSION"));
+            outln!("deckcraft-cli {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
         }
         Some("info") => report(info(rest)),
@@ -70,13 +70,13 @@ fn main() -> ExitCode {
         Some("app") => report(app(rest)),
         Some("mcp") => report(mcp(rest)),
         Some("links") => {
-            use slidecraft_engine::links::*;
+            use deckcraft_engine::links::*;
             outln!("Discord   {DISCORD}\nWebsite   {WEBSITE}\nApp page  {APP_PAGE}\nGitHub    {GITHUB}");
             ExitCode::SUCCESS
         }
         _ => {
             eprintln!("{USAGE}");
-            eprintln!("\nCommunity: {}  ·  {}", slidecraft_engine::links::DISCORD, slidecraft_engine::links::APP_PAGE);
+            eprintln!("\nCommunity: {}  ·  {}", deckcraft_engine::links::DISCORD, deckcraft_engine::links::APP_PAGE);
             ExitCode::FAILURE
         }
     }
@@ -86,7 +86,7 @@ fn report(r: Result<(), String>) -> ExitCode {
     match r {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("slidecraft-cli: {e}");
+            eprintln!("deckcraft-cli: {e}");
             ExitCode::FAILURE
         }
     }
@@ -94,7 +94,7 @@ fn report(r: Result<(), String>) -> ExitCode {
 
 fn open(s: &mut Session, input: Option<&str>, sample: bool) -> Result<(), String> {
     if sample {
-        return slidecraft_engine::sample::open_sample(s).map_err(|e| e.to_string());
+        return deckcraft_engine::sample::open_sample(s).map_err(|e| e.to_string());
     }
     match input {
         Some(p) => s.execute("file.open", &json!({"path": p})).map(|_| ()).map_err(|e| e.to_string()),
@@ -153,7 +153,7 @@ fn render(args: &[String]) -> Result<(), String> {
         if i >= n {
             return Err(format!("no slide {i} (the deck has {n})"));
         }
-        let (png, w, h) = slidecraft_engine::cmd::file::render_png(&st.doc, i, scale, edit);
+        let (png, w, h) = deckcraft_engine::cmd::file::render_png(&st.doc, i, scale, edit);
         let path = if all { format!("{out}/slide-{:02}.png", i + 1) } else { out.clone() };
         std::fs::write(&path, png).map_err(|e| format!("{path}: {e}"))?;
         outln!("{path} ({w}×{h})");
@@ -165,7 +165,7 @@ fn convert(args: &[String]) -> Result<(), String> {
     let (Some(input), Some(out)) = (args.first(), args.get(1)) else { return Err("convert needs IN and OUT".into()) };
     let mut s = Session::new();
     open(&mut s, Some(input), false)?;
-    let fmt = slidecraft_engine::cmd::file::format_for_path(out);
+    let fmt = deckcraft_engine::cmd::file::format_for_path(out);
     let r = if matches!(fmt, "png" | "jpeg") {
         s.execute("file.export", &json!({"path": out, "slide": 0}))
     } else {
@@ -218,14 +218,14 @@ fn run(args: &[String]) -> Result<(), String> {
 
 fn describe(id: Option<&str>) -> Result<(), String> {
     let id = id.ok_or("describe needs a command id")?;
-    let c = slidecraft_engine::find_command(id).ok_or_else(|| format!("unknown command `{id}`"))?;
+    let c = deckcraft_engine::find_command(id).ok_or_else(|| format!("unknown command `{id}`"))?;
     outln!("{}  —  {}\n  where:    {}\n  shortcut: {}\n  params:   {}", c.id, c.label, c.menu.join(" ▸ "), c.shortcut.unwrap_or("—"), c.params);
     Ok(())
 }
 
 fn app(args: &[String]) -> Result<(), String> {
-    use slidecraft_mcp::{Backend, Remote, control_addr};
-    let mut port = slidecraft_mcp::DEFAULT_PORT.to_string();
+    use deckcraft_mcp::{Backend, Remote, control_addr};
+    let mut port = deckcraft_mcp::DEFAULT_PORT.to_string();
     let mut method: Option<String> = None;
     let mut rest = vec![];
     let mut it = args.iter();
@@ -237,7 +237,7 @@ fn app(args: &[String]) -> Result<(), String> {
         }
     }
     let mut r = Remote::connect(&control_addr(&port))
-        .map_err(|e| format!("no SlideCraft app on port {port} ({e}); start it with `slidecraft --control {port}`"))?;
+        .map_err(|e| format!("no DeckCraft app on port {port} ({e}); start it with `deckcraft --control {port}`"))?;
     let parse = |s: Option<&String>| -> Result<Value, String> {
         s.map(|j| serde_json::from_str(j).map_err(|e| format!("bad JSON: {e}"))).transpose().map(|v| v.unwrap_or(json!({})))
     };
@@ -253,7 +253,7 @@ fn app(args: &[String]) -> Result<(), String> {
 }
 
 fn mcp(args: &[String]) -> Result<(), String> {
-    use slidecraft_mcp::{Backend, Headless, Remote, Server, control_addr};
+    use deckcraft_mcp::{Backend, Headless, Remote, Server, control_addr};
     let mut connect: Option<String> = None;
     let mut sample = false;
     let mut it = args.iter();
@@ -269,7 +269,7 @@ fn mcp(args: &[String]) -> Result<(), String> {
         None => {
             let mut h = Headless::new();
             if sample {
-                slidecraft_engine::sample::open_sample(&mut h.session).map_err(|e| e.to_string())?;
+                deckcraft_engine::sample::open_sample(&mut h.session).map_err(|e| e.to_string())?;
             }
             Box::new(h)
         }

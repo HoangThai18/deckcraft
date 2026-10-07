@@ -1,4 +1,4 @@
-# SlideCraft — working notes for Claude
+# DeckCraft — working notes for Claude
 
 Read [AGENTS.md](AGENTS.md) first: its rules (asset policy, clean room, never crash) bind you and
 win over anything here.
@@ -10,8 +10,8 @@ win over anything here.
 
 ## Habits
 - Every user-visible action is a command with tests (`crates/engine/src/cmd/*`).
-- Look at UI changes: `slidecraft --sample --control 7979` + `ui.screenshot`, or
-  `slidecraft-cli render`.
+- Look at UI changes: `deckcraft --sample --control 7979` + `ui.screenshot`, or
+  `deckcraft-cli render`.
 - Commit after each landed arc (`M<n>.<k>: what`) and push to `origin main`.
 - Keep `ROADMAP.md` and `plan/STATUS.md` current.
 - Don't ask the user questions; record genuinely-theirs decisions in `plan/STATUS.md`.

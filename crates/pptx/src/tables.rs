@@ -1,5 +1,5 @@
 //! Table styles: our style ids ↔ table style GUIDs, and `tableStyles.xml` definitions for the
-//! styles we write (generated from theme accents, matching how SlideCraft draws them).
+//! styles we write (generated from theme accents, matching how DeckCraft draws them).
 
 use crate::opc::NS_A;
 use crate::xml::{A, W};
@@ -44,7 +44,7 @@ pub fn guid(text: &str) -> String {
 }
 
 fn own_guid(style: &str) -> String {
-    guid(&format!("slidecraft-table-style:{style}"))
+    guid(&format!("deckcraft-table-style:{style}"))
 }
 
 /// Table style GUID → our style id (or the GUID itself when unknown).
@@ -53,7 +53,7 @@ pub fn style_from_guid(g: &str) -> String {
     if let Some((_, s)) = KNOWN.iter().find(|(k, _)| *k == up) {
         return s.to_string();
     }
-    for (id, _) in slidecraft_model::table::table_styles() {
+    for (id, _) in deckcraft_model::table::table_styles() {
         if own_guid(&id) == up {
             return id;
         }
@@ -71,7 +71,7 @@ pub fn guid_for_style(style: &str) -> (String, bool) {
     {
         return (g.to_string(), false);
     }
-    let known = slidecraft_model::table::table_styles().iter().any(|(id, _)| id == style);
+    let known = deckcraft_model::table::table_styles().iter().any(|(id, _)| id == style);
     if known { (own_guid(style), true) } else { ("{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}".into(), false) }
 }
 
@@ -202,7 +202,7 @@ fn style_def(w: &mut W, id: &str, name: &str) {
 pub fn table_styles_xml(used: &[String]) -> Vec<u8> {
     let mut w = W::new();
     w.open("a:tblStyleLst", A::new().a("xmlns:a", NS_A).a("def", "{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"));
-    let names = slidecraft_model::table::table_styles();
+    let names = deckcraft_model::table::table_styles();
     let mut done: Vec<&str> = vec![];
     for s in used {
         if done.contains(&s.as_str()) {
@@ -213,7 +213,7 @@ pub fn table_styles_xml(used: &[String]) -> Vec<u8> {
         if !define {
             continue;
         }
-        let name = names.iter().find(|(id, _)| id == s).map(|(_, n)| format!("SlideCraft {n}")).unwrap_or_else(|| s.clone());
+        let name = names.iter().find(|(id, _)| id == s).map(|(_, n)| format!("DeckCraft {n}")).unwrap_or_else(|| s.clone());
         style_def(&mut w, s, &name);
     }
     w.close("a:tblStyleLst");
@@ -230,7 +230,7 @@ mod tests {
             "tblBg", "wholeTbl", "band1H", "band2H", "band1V", "band2V", "lastCol", "firstCol", "lastRow", "seCell", "swCell", "firstRow", "neCell",
             "nwCell",
         ];
-        let used: Vec<String> = slidecraft_model::table::table_styles().into_iter().map(|(id, _)| id).collect();
+        let used: Vec<String> = deckcraft_model::table::table_styles().into_iter().map(|(id, _)| id).collect();
         let d = crate::xml::parse(&table_styles_xml(&used)).unwrap();
         let mut n = 0;
         for st in d.root.children_named("tblStyle") {
@@ -243,7 +243,7 @@ mod tests {
 
     #[test]
     fn guids_round_trip() {
-        for (id, _) in slidecraft_model::table::table_styles() {
+        for (id, _) in deckcraft_model::table::table_styles() {
             let (g, _) = guid_for_style(&id);
             assert_eq!(style_from_guid(&g), id, "{id} via {g}");
             assert_eq!(g.len(), 38);

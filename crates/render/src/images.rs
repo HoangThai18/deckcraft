@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use slidecraft_model::style::PictureAdjust;
+use deckcraft_model::style::PictureAdjust;
 use vello_cpu::Pixmap;
 
 const BUDGET: usize = 512 << 20;

@@ -1,24 +1,24 @@
 [package]
-name = "slidecraft-engine"
+name = "deckcraft-engine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "SlideCraft engine: sessions, undo history, selection, the command registry every frontend dispatches through, and pointer tools"
+description = "DeckCraft engine: sessions, undo history, selection, the command registry every frontend dispatches through, and pointer tools"
 
 [lints]
 workspace = true
 
 [dependencies]
-slidecraft-geom = { workspace = true }
-slidecraft-color = { workspace = true }
-slidecraft-model = { workspace = true }
-slidecraft-fonts = { workspace = true }
-slidecraft-text = { workspace = true }
-slidecraft-render = { workspace = true }
-slidecraft-pdf = { workspace = true }
-slidecraft-format = { workspace = true }
-slidecraft-pptx = { workspace = true }
-slidecraft-media = { workspace = true }
+deckcraft-geom = { workspace = true }
+deckcraft-color = { workspace = true }
+deckcraft-model = { workspace = true }
+deckcraft-fonts = { workspace = true }
+deckcraft-text = { workspace = true }
+deckcraft-render = { workspace = true }
+deckcraft-pdf = { workspace = true }
+deckcraft-format = { workspace = true }
+deckcraft-pptx = { workspace = true }
+deckcraft-media = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 i_overlay = { workspace = true }

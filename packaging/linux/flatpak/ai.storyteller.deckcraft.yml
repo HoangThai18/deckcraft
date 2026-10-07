@@ -1,20 +1,20 @@
-# Flatpak manifest for SlideCraft, ready for a Flathub submission.
+# Flatpak manifest for DeckCraft, ready for a Flathub submission.
 #
 # Flatpak builds run offline, so the crate sources must be vendored first. From the repo root:
 #
 #   curl -fsSLO https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
 #   python3 flatpak-cargo-generator.py Cargo.lock -o packaging/linux/flatpak/cargo-sources.json
-#   flatpak-builder --user --install --force-clean build-flatpak packaging/linux/flatpak/ai.storyteller.slidecraft.yml
-#   flatpak run ai.storyteller.slidecraft
+#   flatpak-builder --user --install --force-clean build-flatpak packaging/linux/flatpak/ai.storyteller.deckcraft.yml
+#   flatpak run ai.storyteller.deckcraft
 #
 # For Flathub, replace the `dir` source with a `git` source pinned to a release tag and commit.
-id: ai.storyteller.slidecraft
+id: ai.storyteller.deckcraft
 runtime: org.freedesktop.Platform
 runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
-command: slidecraft
+command: deckcraft
 finish-args:
   - --share=ipc
   - --socket=wayland
@@ -27,23 +27,23 @@ finish-args:
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin
 modules:
-  - name: slidecraft
+  - name: deckcraft
     buildsystem: simple
     build-options:
       env:
-        CARGO_HOME: /run/build/slidecraft/cargo
+        CARGO_HOME: /run/build/deckcraft/cargo
         CARGO_NET_OFFLINE: 'true'
     build-commands:
-      - cargo --offline build --release --locked -p slidecraft
-      - install -Dm755 target/release/slidecraft /app/bin/slidecraft
-      - install -Dm644 packaging/linux/ai.storyteller.slidecraft.desktop /app/share/applications/ai.storyteller.slidecraft.desktop
-      - install -Dm644 packaging/linux/ai.storyteller.slidecraft.mime.xml /app/share/mime/packages/ai.storyteller.slidecraft.xml
+      - cargo --offline build --release --locked -p deckcraft
+      - install -Dm755 target/release/deckcraft /app/bin/deckcraft
+      - install -Dm644 packaging/linux/ai.storyteller.deckcraft.desktop /app/share/applications/ai.storyteller.deckcraft.desktop
+      - install -Dm644 packaging/linux/ai.storyteller.deckcraft.mime.xml /app/share/mime/packages/ai.storyteller.deckcraft.xml
       - mkdir -p /app/share/icons && cp -R assets/app-icon/hicolor /app/share/icons/
       - >-
         version=$(awk '/^\[/{p=($0=="[workspace.package]");next} p&&$1=="version"{gsub(/[" ]/,"",$3);print $3;exit}' Cargo.toml);
         install -d /app/share/metainfo;
         sed -e "s/@VERSION@/$version/" -e "s/@DATE@/$(date -u +%Y-%m-%d)/"
-        packaging/linux/ai.storyteller.slidecraft.metainfo.xml.in > /app/share/metainfo/ai.storyteller.slidecraft.metainfo.xml
+        packaging/linux/ai.storyteller.deckcraft.metainfo.xml.in > /app/share/metainfo/ai.storyteller.deckcraft.metainfo.xml
     sources:
       - type: dir
         path: ../../..
