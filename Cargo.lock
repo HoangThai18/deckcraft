@@ -3248,9 +3248,12 @@ dependencies = [
 name = "slidecraft-pptx"
 version = "0.1.0"
 dependencies = [
+ "image",
  "log",
  "quick-xml 0.38.4",
+ "serde_json",
  "slidecraft-color",
+ "slidecraft-engine",
  "slidecraft-geom",
  "slidecraft-model",
  "thiserror 2.0.21",
