@@ -1,3 +1,11 @@
-plan/
-plans/
 *~
+plan/
+/target
+/target-*/
+/dist
+/corpus
+/log
+.DS_Store
+/.claude/
+/craft-fonts/
+packaging/env.sh

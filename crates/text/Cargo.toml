@@ -1,0 +1,17 @@
+[package]
+name = "slidecraft-text"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SlideCraft text layout: runs to shaped glyph lines with bullets, indents, spacing, alignment, anchoring, autofit and caret hit testing"
+
+[lints]
+workspace = true
+
+[dependencies]
+slidecraft-model = { workspace = true }
+slidecraft-geom = { workspace = true }
+slidecraft-color = { workspace = true }
+slidecraft-fonts = { workspace = true }
+unicode-linebreak = { workspace = true }
+unicode-segmentation = { workspace = true }

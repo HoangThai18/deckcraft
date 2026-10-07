@@ -1,0 +1,18 @@
+[package]
+name = "slidecraft-pptx"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SlideCraft PPTX: Office Open XML (PresentationML/DrawingML) import and export, written from the public ECMA-376 standard"
+
+[lints]
+workspace = true
+
+[dependencies]
+slidecraft-model = { workspace = true }
+slidecraft-geom = { workspace = true }
+slidecraft-color = { workspace = true }
+quick-xml = { workspace = true }
+zip = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }

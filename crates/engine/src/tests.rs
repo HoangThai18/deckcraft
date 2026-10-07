@@ -1,0 +1,250 @@
+use serde_json::json;
+
+use crate::*;
+
+fn session() -> Session {
+    Session::with_new()
+}
+
+#[test]
+fn new_presentation_and_slides() {
+    let mut s = session();
+    assert_eq!(s.doc().unwrap().doc.slides.len(), 1);
+    s.execute("slide.new", &json!({})).unwrap();
+    s.execute("slide.new", &json!({"layout": "blank"})).unwrap();
+    assert_eq!(s.doc().unwrap().doc.slides.len(), 3);
+    assert_eq!(s.doc().unwrap().selection.slide, 2);
+    s.execute("slide.duplicate", &json!({})).unwrap();
+    assert_eq!(s.doc().unwrap().doc.slides.len(), 4);
+    s.execute("slide.move", &json!({"from": 3, "to": 0})).unwrap();
+    s.execute("slide.delete", &json!({"index": 0})).unwrap();
+    assert_eq!(s.doc().unwrap().doc.slides.len(), 3);
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(s.doc().unwrap().doc.slides.len(), 4);
+    s.execute("edit.redo", &json!({})).unwrap();
+    assert_eq!(s.doc().unwrap().doc.slides.len(), 3);
+}
+
+#[test]
+fn insert_shape_and_format() {
+    let mut s = session();
+    let r = s.execute("shape.insert", &json!({"preset": "roundRect", "rect": [100, 100, 200, 100], "text": "Hi"})).unwrap();
+    let id = r["id"].as_u64().unwrap();
+    s.execute("shape.fill", &json!({"color": "#ff0000"})).unwrap();
+    s.execute("shape.line", &json!({"width": 3, "color": "accent2", "dash": "dash"})).unwrap();
+    s.execute("shape.rotate", &json!({"deg": 30})).unwrap();
+    s.execute("shape.move", &json!({"dx": 10, "dy": -5})).unwrap();
+    s.execute("format.bold", &json!({})).unwrap();
+    let v = s.execute("shape.inspect", &json!({"id": id})).unwrap();
+    assert_eq!(v["box"]["x"], 110.0);
+    assert_eq!(v["box"]["rot"], 30.0);
+    let runs = &v["shape"]["text"]["paragraphs"][0]["runs"][0]["props"];
+    assert_eq!(runs["bold"], true);
+    // Undo restores step by step.
+    for _ in 0..5 {
+        s.execute("edit.undo", &json!({})).unwrap();
+    }
+    let v = s.execute("shape.inspect", &json!({"id": id})).unwrap();
+    assert!(v["shape"]["fill"].is_null());
+}
+
+#[test]
+fn text_editing_flow() {
+    let mut s = session();
+    let title = s.doc().unwrap().current_slide().unwrap().shapes[0].id.0;
+    s.execute("text.edit", &json!({"id": title})).unwrap();
+    s.execute("text.insert", &json!({"text": "Hello world"})).unwrap();
+    s.execute("text.move", &json!({"to": "wordLeft", "extend": true})).unwrap();
+    s.execute("format.italic", &json!({})).unwrap();
+    s.execute("text.move", &json!({"to": "end"})).unwrap();
+    s.execute("text.delete", &json!({"dir": "backward"})).unwrap();
+    s.execute("text.insert", &json!({"text": "D\nSecond"})).unwrap();
+    let t = s.execute("text.get", &json!({"id": title})).unwrap();
+    assert_eq!(t["text"], "Hello worlD\nSecond");
+    s.execute("text.exit", &json!({})).unwrap();
+    assert!(s.doc().unwrap().selection.text.is_none());
+    assert_eq!(s.doc().unwrap().selection.shapes.len(), 1);
+}
+
+#[test]
+fn smart_quotes_and_autocorrect() {
+    let mut s = session();
+    let title = s.doc().unwrap().current_slide().unwrap().shapes[0].id.0;
+    s.execute("text.edit", &json!({"id": title})).unwrap();
+    for c in ["\"", "h", "i", "\"", " ", "t", "e", "h", " "] {
+        s.execute("text.insert", &json!({"text": c})).unwrap();
+    }
+    let t = s.execute("text.get", &json!({"id": title})).unwrap();
+    assert_eq!(t["text"], "“hi” the ");
+}
+
+#[test]
+fn clipboard_copy_paste_shapes_and_slides() {
+    let mut s = session();
+    s.execute("shape.insert", &json!({"preset": "ellipse", "rect": [10, 10, 50, 50]})).unwrap();
+    s.execute("edit.copy", &json!({})).unwrap();
+    s.execute("edit.paste", &json!({})).unwrap();
+    s.execute("edit.paste", &json!({})).unwrap();
+    let n = s.doc().unwrap().current_slide().unwrap().shapes.len();
+    assert_eq!(n, 2 + 3);
+    s.execute("edit.copy", &json!({"scope": "slides"})).unwrap();
+    s.execute("edit.paste", &json!({"scope": "slides"})).unwrap();
+    assert_eq!(s.doc().unwrap().doc.slides.len(), 2);
+    assert!(s.doc().unwrap().doc.validate().is_empty());
+}
+
+#[test]
+fn group_ungroup_roundtrip_positions() {
+    let mut s = session();
+    let a = s.execute("shape.insert", &json!({"preset": "rect", "rect": [100, 100, 50, 50]})).unwrap()["id"].as_u64().unwrap();
+    let b = s.execute("shape.insert", &json!({"preset": "rect", "rect": [300, 200, 50, 50]})).unwrap()["id"].as_u64().unwrap();
+    s.execute("edit.select", &json!({"ids": [a, b]})).unwrap();
+    let g = s.execute("arrange.group", &json!({})).unwrap()["id"].as_u64().unwrap();
+    s.execute("shape.move", &json!({"id": g, "dx": 10})).unwrap();
+    s.execute("arrange.ungroup", &json!({"ids": [g]})).unwrap();
+    let v = s.execute("shape.inspect", &json!({"id": b})).unwrap();
+    assert!((v["box"]["x"].as_f64().unwrap() - 310.0).abs() < 1e-6, "{v}");
+}
+
+#[test]
+fn align_and_distribute() {
+    let mut s = session();
+    let mut ids = vec![];
+    for (x, y) in [(10.0, 10.0), (200.0, 50.0), (500.0, 90.0)] {
+        ids.push(s.execute("shape.insert", &json!({"preset": "rect", "rect": [x, y, 40, 40]})).unwrap()["id"].as_u64().unwrap());
+    }
+    s.execute("edit.select", &json!({"ids": ids})).unwrap();
+    s.execute("arrange.align", &json!({"edge": "top"})).unwrap();
+    s.execute("arrange.distribute", &json!({"dir": "horizontal"})).unwrap();
+    let ys: Vec<f64> = ids.iter().map(|i| s.execute("shape.inspect", &json!({"id": i})).unwrap()["box"]["y"].as_f64().unwrap()).collect();
+    assert!(ys.iter().all(|y| (*y - 10.0).abs() < 1e-6));
+    let x1 = s.execute("shape.inspect", &json!({"id": ids[1]})).unwrap()["box"]["x"].as_f64().unwrap();
+    assert!((x1 - 255.0).abs() < 1e-6, "{x1}");
+}
+
+#[test]
+fn pointer_draw_move_resize() {
+    let mut s = session();
+    s.set_tool(ToolKind::Shape { preset: "rect".into() });
+    let ev = |kind, x, y| PointerEvent { kind, x, y, mods: Mods::default(), tol: 3.0 };
+    s.pointer(ev(PointerKind::Down, 100.0, 100.0)).unwrap();
+    s.pointer(ev(PointerKind::Drag, 200.0, 180.0)).unwrap();
+    let r = s.pointer(ev(PointerKind::Up, 200.0, 180.0)).unwrap();
+    let id = r["id"].as_u64().unwrap();
+    assert_eq!(s.tool.kind, ToolKind::Select);
+    // Move by dragging the middle.
+    s.prefs.snap_to_grid = false;
+    s.prefs.smart_guides = false;
+    s.pointer(ev(PointerKind::Down, 150.0, 140.0)).unwrap();
+    s.pointer(ev(PointerKind::Drag, 170.0, 150.0)).unwrap();
+    s.pointer(ev(PointerKind::Up, 170.0, 150.0)).unwrap();
+    let v = s.execute("shape.inspect", &json!({"id": id})).unwrap();
+    assert_eq!(v["box"]["x"], 120.0);
+    assert_eq!(v["box"]["y"], 110.0);
+    // One undo step per gesture.
+    s.execute("edit.undo", &json!({})).unwrap();
+    let v = s.execute("shape.inspect", &json!({"id": id})).unwrap();
+    assert_eq!(v["box"]["x"], 100.0);
+    // Resize from the SE handle.
+    s.execute("edit.select", &json!({"ids": [id]})).unwrap();
+    s.pointer(ev(PointerKind::Down, 200.0, 180.0)).unwrap();
+    s.pointer(ev(PointerKind::Drag, 250.0, 200.0)).unwrap();
+    s.pointer(ev(PointerKind::Up, 250.0, 200.0)).unwrap();
+    let v = s.execute("shape.inspect", &json!({"id": id})).unwrap();
+    assert_eq!(v["box"]["w"], 150.0);
+}
+
+#[test]
+fn click_into_placeholder_starts_editing() {
+    let mut s = session();
+    let ev = |kind, x, y| PointerEvent { kind, x, y, mods: Mods::default(), tol: 3.0 };
+    s.pointer(ev(PointerKind::Down, 480.0, 200.0)).unwrap();
+    s.pointer(ev(PointerKind::Up, 480.0, 200.0)).unwrap();
+    assert!(s.doc().unwrap().selection.text.is_some());
+    s.execute("text.insert", &json!({"text": "Typed"})).unwrap();
+    assert_eq!(s.doc().unwrap().current_slide().unwrap().title(), "Typed");
+}
+
+#[test]
+fn sample_deck_builds_and_renders() {
+    let mut s = Session::new();
+    sample::open_sample(&mut s).unwrap();
+    let st = s.doc().unwrap();
+    assert!(st.doc.slides.len() >= 8);
+    assert!(st.doc.validate().is_empty());
+    assert!(!st.is_dirty());
+    for i in 0..st.doc.slides.len() {
+        let img = slidecraft_render::render_slide(&st.doc, i, &slidecraft_render::RenderOpts { scale: 0.2, ..Default::default() });
+        assert_eq!(img.width, 192);
+    }
+    let v = s.execute("document.inspect", &json!({})).unwrap();
+    assert!(v["slides"].as_array().unwrap().len() >= 8);
+}
+
+#[test]
+fn save_and_reopen_native() {
+    let mut s = Session::new();
+    sample::open_sample(&mut s).unwrap();
+    let bytes = s.execute("file.saveBytes", &json!({})).unwrap()["data"].as_str().unwrap().to_string();
+    let n = s.doc().unwrap().doc.slides.len();
+    s.execute("file.openBytes", &json!({"name": "x.slidecraft", "data": bytes})).unwrap();
+    assert_eq!(s.doc().unwrap().doc.slides.len(), n);
+    assert_eq!(s.documents().len(), 2);
+}
+
+#[test]
+fn every_command_survives_empty_and_hostile_params() {
+    let mut s = Session::new();
+    sample::open_sample(&mut s).unwrap();
+    s.execute("edit.select", &json!({"ids": [s.doc().unwrap().current_slide().unwrap().shapes[0].id.0]})).unwrap();
+    let ids: Vec<&str> = command_specs()
+        .iter()
+        .map(|c| c.id)
+        .filter(|id| !matches!(*id, "file.close" | "file.open" | "file.save" | "file.saveAs" | "file.export" | "file.saveTemplate"))
+        .collect();
+    for p in [
+        json!({}),
+        json!(null),
+        json!([1, 2]),
+        json!({"index": 99999, "ids": [999999], "id": -1, "text": "x", "rect": "bad", "color": 5, "size": 1e308}),
+    ] {
+        for id in &ids {
+            let _ = s.execute(id, &p);
+        }
+    }
+    assert!(s.active().is_some());
+    for d in s.documents() {
+        assert!(d.doc.validate().is_empty(), "{:?}", d.doc.validate());
+    }
+}
+
+#[test]
+fn base64_roundtrip() {
+    for data in [vec![], vec![0u8], vec![1, 2], vec![1, 2, 3], (0..=255u8).collect::<Vec<_>>()] {
+        assert_eq!(cmd::base64_decode(&cmd::base64_encode(&data)).unwrap(), data);
+    }
+    assert!(cmd::base64_decode("!!").is_none());
+}
+
+#[test]
+fn layout_change_keeps_text() {
+    let mut s = session();
+    s.execute("slide.new", &json!({"layout": "titleAndContent", "title": "T", "body": "B"})).unwrap();
+    s.execute("slide.layout", &json!({"layout": "twoContent"})).unwrap();
+    let v = s.execute("slide.inspect", &json!({})).unwrap();
+    let texts: Vec<String> = v["shapes"].as_array().unwrap().iter().filter_map(|x| x["text"].as_str().map(String::from)).collect();
+    assert!(texts.contains(&"T".to_string()) && texts.contains(&"B".to_string()), "{v}");
+    assert_eq!(v["layout"], "Two Content");
+}
+
+#[test]
+fn themes_and_slide_size() {
+    let mut s = session();
+    s.execute("design.theme", &json!({"name": "Ember"})).unwrap();
+    assert_eq!(s.doc().unwrap().doc.masters[0].theme.name, "Ember");
+    s.execute("design.slideSize", &json!({"preset": "standard"})).unwrap();
+    assert_eq!(s.doc().unwrap().doc.slide_size.width, 720.0);
+    s.execute("design.headerFooter", &json!({"slideNumber": true, "footer": true, "footerText": "Hello"})).unwrap();
+    let v = s.execute("slide.inspect", &json!({})).unwrap();
+    assert!(v["shapes"].as_array().unwrap().iter().any(|x| x["placeholder"] == "sldNum"));
+}

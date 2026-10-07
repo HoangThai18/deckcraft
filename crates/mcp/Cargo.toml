@@ -1,0 +1,15 @@
+[package]
+name = "slidecraft-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SlideCraft MCP server: JSON-RPC 2.0 over stdio, driving a running app or a headless session"
+
+[lints]
+workspace = true
+
+[dependencies]
+slidecraft-engine = { workspace = true }
+slidecraft-render = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
