@@ -8,6 +8,7 @@
 #![forbid(unsafe_code)]
 
 pub mod cmd;
+pub mod connect;
 pub mod guard;
 pub mod keys;
 pub mod links;
@@ -381,6 +382,7 @@ impl Session {
         let mut doc = (*st.doc).clone();
         let mut sel = st.selection.clone();
         let r = f(&mut doc, &mut sel)?;
+        connect::reroute(&mut doc, &sel);
         st.doc = Arc::new(doc);
         st.selection = sel;
         st.revision += 1;

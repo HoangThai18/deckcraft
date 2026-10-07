@@ -248,3 +248,65 @@ fn themes_and_slide_size() {
     let v = s.execute("slide.inspect", &json!({})).unwrap();
     assert!(v["shapes"].as_array().unwrap().iter().any(|x| x["placeholder"] == "sldNum"));
 }
+
+fn line_ends(s: &Session, id: u64) -> (slidecraft_geom::Point, slidecraft_geom::Point) {
+    let st = s.doc().unwrap();
+    let sh = st.shape(slidecraft_model::ShapeId(id as u32)).unwrap();
+    connect::endpoints(&cmd::xfrm_of(&st.doc, &st.selection, sh))
+}
+
+#[test]
+fn connectors_follow_glued_shapes() {
+    let mut s = session();
+    let a = s.execute("shape.insert", &json!({"preset": "rect", "rect": [100, 100, 100, 50]})).unwrap()["id"].as_u64().unwrap();
+    let b = s.execute("shape.insert", &json!({"preset": "rect", "rect": [400, 300, 100, 50]})).unwrap()["id"].as_u64().unwrap();
+    let r = s.execute("shape.connect", &json!({"from": a, "to": b, "preset": "bentConnector3"})).unwrap();
+    let c = r["id"].as_u64().unwrap();
+    let (p0, p1) = line_ends(&s, c);
+    // Closest pair: right side of A → left side of B... or bottom/top; either way on the boxes.
+    let sites_a: Vec<Vec<f64>> = serde_json::from_value(s.execute("shape.sites", &json!({"id": a})).unwrap()).unwrap();
+    assert!(sites_a.iter().any(|q| (q[0] - p0.x).abs() < 1e-6 && (q[1] - p0.y).abs() < 1e-6));
+    // Move B: the connector's end follows, its start stays.
+    s.execute("edit.select", &json!({"ids": [b]})).unwrap();
+    s.execute("shape.move", &json!({"dx": 50, "dy": 20})).unwrap();
+    let (q0, q1) = line_ends(&s, c);
+    assert!((q0 - p0).hypot() < 1e-6);
+    assert!(((q1 - p1) - slidecraft_geom::Vec2::new(50.0, 20.0)).hypot() < 1e-6, "{p1:?} → {q1:?}");
+    // Undo puts both back in one step.
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert!((line_ends(&s, c).1 - p1).hypot() < 1e-6);
+    // Deleting a glued shape unglues that end and leaves the line where it was.
+    s.execute("edit.select", &json!({"ids": [a]})).unwrap();
+    s.execute("edit.delete", &json!({})).unwrap();
+    let st = s.doc().unwrap();
+    let sh = st.shape(slidecraft_model::ShapeId(c as u32)).unwrap();
+    assert!(matches!(sh.kind, slidecraft_model::ShapeKind::Connector { start: None, end: Some(_) }));
+}
+
+#[test]
+fn drawing_a_line_between_shapes_glues_it() {
+    let mut s = session();
+    let a = s.execute("shape.insert", &json!({"preset": "ellipse", "rect": [100, 100, 100, 100]})).unwrap()["id"].as_u64().unwrap();
+    let b = s.execute("shape.insert", &json!({"preset": "rect", "rect": [400, 100, 100, 100]})).unwrap()["id"].as_u64().unwrap();
+    s.execute("edit.deselect", &json!({})).unwrap();
+    s.tool.kind = tools::ToolKind::Shape { preset: "straightConnector1".into() };
+    let ev = |kind, x: f64, y: f64| tools::PointerEvent { kind, x, y, mods: Default::default(), tol: 4.0 };
+    // Right site of the ellipse (200,150) → left site of the rect (400,150), a little off.
+    s.pointer(ev(tools::PointerKind::Down, 202.0, 151.0)).unwrap();
+    s.pointer(ev(tools::PointerKind::Drag, 300.0, 150.0)).unwrap();
+    assert!(!s.tool.sites.is_empty() || s.tool.glue.is_none());
+    s.pointer(ev(tools::PointerKind::Drag, 398.0, 149.0)).unwrap();
+    assert!(s.tool.glue.is_some());
+    s.pointer(ev(tools::PointerKind::Up, 398.0, 149.0)).unwrap();
+    let st = s.doc().unwrap();
+    let line = st.shapes().iter().find(|x| x.is_line()).unwrap();
+    match line.kind {
+        slidecraft_model::ShapeKind::Connector { start: Some((x, _)), end: Some((y, _)) } => {
+            assert_eq!((x.0 as u64, y.0 as u64), (a, b));
+        }
+        ref k => panic!("not glued: {k:?}"),
+    }
+    let id = line.id.0 as u64;
+    let (p0, p1) = line_ends(&s, id);
+    assert!((p0.x - 200.0).abs() < 1e-6 && (p1.x - 400.0).abs() < 1e-6, "{p0:?} {p1:?}");
+}

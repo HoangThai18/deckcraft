@@ -280,8 +280,14 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
         let corners = [Point::new(0.0, 0.0), Point::new(x.w, 0.0), Point::new(x.w, x.h), Point::new(0.0, x.h)].map(|q| xf.to_screen(a * q));
         if sh.is_line() {
             let (p0, p1) = (xf.to_screen(a * Point::new(0.0, 0.0)), xf.to_screen(a * Point::new(x.w, x.h)));
-            for q in [p0, p1] {
-                painter.circle(q, 4.5, t.handle_fill, Stroke::new(1.0, t.handle_stroke));
+            let glued = match sh.kind {
+                slidecraft_model::ShapeKind::Connector { start, end } => [start.is_some(), end.is_some()],
+                _ => [false, false],
+            };
+            for (q, g) in [p0, p1].into_iter().zip(glued) {
+                // Glued ends are filled with the accent, like attached connector ends.
+                let fill = if g { t.accent } else { t.handle_fill };
+                painter.circle(q, 4.5, fill, Stroke::new(1.0, if g { t.handle_fill } else { t.handle_stroke }));
             }
             continue;
         }
@@ -374,6 +380,14 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
     }
     if let Some(pv) = app.session.tool.preview {
         draw_preview(app, painter, xf, pv, t);
+    }
+    // Connection sites of the shape under a connector end, and the site it would glue to.
+    for q in &app.session.tool.sites {
+        let c = xf.to_screen(*q);
+        painter.circle(c, 3.5, t.handle_fill, Stroke::new(1.0, t.handle_stroke));
+    }
+    if let Some(g) = app.session.tool.glue {
+        painter.circle(xf.to_screen(g), 5.0, t.accent, Stroke::new(1.5, t.handle_fill));
     }
     if app.session.tool.ink_preview.len() > 1
         && let ToolKind::Ink { color, width, mode } = &app.session.tool.kind

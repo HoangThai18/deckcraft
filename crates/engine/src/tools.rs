@@ -121,6 +121,10 @@ pub struct ToolState {
     pub guides: Vec<Guide>,
     pub hover: Option<Hit>,
     pub ink_preview: Vec<(f64, f64, f32)>,
+    /// Connection sites to show (slide coordinates) while drawing or dragging a line end, and the
+    /// site the end would glue to.
+    pub sites: Vec<Point>,
+    pub glue: Option<Point>,
 }
 
 impl ToolState {
@@ -206,6 +210,13 @@ impl Session {
         match ev.kind {
             PointerKind::Move => {
                 self.tool.hover = self.hit_test(p, tol);
+                let line_tool = matches!(&self.tool.kind, ToolKind::Shape { preset } if slidecraft_geom::preset::is_line_like(preset));
+                if line_tool {
+                    self.update_sites(p, tol, None);
+                } else {
+                    self.tool.sites.clear();
+                    self.tool.glue = None;
+                }
                 Ok(Value::Null)
             }
             PointerKind::Down => self.down(p, ev.mods, tol),
@@ -393,6 +404,17 @@ impl Session {
                             sh.xfrm = Some(Xfrm { x: o.x + d.x, y: o.y + d.y, ..*o });
                         }
                     }
+                    // A connector dragged away from shapes that stay put comes unglued at those ends.
+                    let moved: Vec<ShapeId> = origs2.iter().map(|o| o.0).collect();
+                    for sh in list.iter_mut().filter(|s| moved.contains(&s.id)) {
+                        if let ShapeKind::Connector { start, end } = &mut sh.kind {
+                            for c in [start, end] {
+                                if c.is_some_and(|(to, _)| !moved.contains(&to)) {
+                                    *c = None;
+                                }
+                            }
+                        }
+                    }
                     Ok(())
                 })?;
                 self.tool.drag =
@@ -411,8 +433,18 @@ impl Session {
                 if mods.shift {
                     q = constrain_45(other, q);
                 }
+                let glue = self.update_sites(q, tol, Some(id));
+                if let Some((_, _, at)) = glue {
+                    q = at;
+                }
                 let (s0, s1) = if end == 0 { (q, p1) } else { (p0, q) };
                 self.set_xfrm(id, line_xfrm(s0, s1, orig.rot))?;
+                self.edit(|doc, sel| {
+                    if let Some(list) = crate::shapes_mut(doc, sel) {
+                        crate::connect::set_glue(list, id, end, glue.map(|g| (g.0, g.1)));
+                    }
+                    Ok(())
+                })?;
             }
             Drag::Rotate { ids, center, start, origs } => {
                 let ang = (p.y - center.y).atan2(p.x - center.x);
@@ -474,8 +506,12 @@ impl Session {
             Drag::Create { start } => {
                 let line = matches!(&self.tool.kind, ToolKind::Shape { preset } if slidecraft_geom::preset::is_line_like(preset));
                 let x = if line {
-                    let q = if mods.shift { constrain_45(start, p) } else { p };
-                    line_xfrm(start, q, 0.0)
+                    let mut q = if mods.shift { constrain_45(start, p) } else { p };
+                    if let Some((_, _, at)) = self.update_sites(q, tol, None) {
+                        q = at;
+                    }
+                    let s0 = self.glue_at(start, tol).map(|g| g.2).unwrap_or(start);
+                    line_xfrm(s0, q, 0.0)
                 } else {
                     let mut r = Rect::from_points(start, p);
                     if mods.shift {
@@ -515,6 +551,8 @@ impl Session {
     fn up(&mut self, p: Point, mods: Mods) -> Result<Value> {
         let drag = self.tool.drag.take();
         self.tool.guides.clear();
+        self.tool.sites.clear();
+        self.tool.glue = None;
         let mut out = Value::Null;
         match drag {
             Some(Drag::Move { moved: false, enter_text: Some((id, at)), .. }) => {
@@ -566,7 +604,20 @@ impl Session {
                         };
                         let r = self.execute("shape.insert", &json!({"preset": preset, "rect": [rect.x, rect.y, rect.w, rect.h], "flip": format!("{}{}", if rect.flip_h { "h" } else { "" }, if rect.flip_v { "v" } else { "" })}))?;
                         if let (Some(id), Some(x)) = (r.get("id").and_then(Value::as_u64), preview.filter(|_| dragged && line)) {
-                            let _ = self.set_xfrm_cmd(ShapeId(id as u32), x);
+                            let id = ShapeId(id as u32);
+                            let _ = self.set_xfrm_cmd(id, x);
+                            // Glue the ends that landed on connection sites.
+                            let (p0, p1) = crate::connect::endpoints(&x);
+                            let (g0, g1) = (self.glue_at(p0, 4.0), self.glue_at(p1, 4.0));
+                            if g0.is_some() || g1.is_some() {
+                                let _ = self.edit(|doc, sel| {
+                                    if let Some(list) = crate::shapes_mut(doc, sel) {
+                                        crate::connect::set_glue(list, id, 0, g0.map(|g| (g.0, g.1)));
+                                        crate::connect::set_glue(list, id, 1, g1.map(|g| (g.0, g.1)));
+                                    }
+                                    Ok(())
+                                });
+                            }
                         }
                         r
                     }
@@ -645,6 +696,31 @@ impl Session {
 
     fn is_picture(&self, id: ShapeId) -> bool {
         self.active().and_then(|d| d.shape(id)).is_some_and(|s| matches!(s.kind, ShapeKind::Picture { .. } | ShapeKind::Media(_)))
+    }
+
+    /// The connection site within glue range of `p` (excluding shape `exclude`).
+    fn glue_at(&self, p: Point, tol: f64) -> Option<(ShapeId, u32, Point)> {
+        let st = self.active()?;
+        crate::connect::nearest_site(&st.doc, &st.selection, st.shapes(), p, (tol * 2.0).max(6.0), None)
+    }
+
+    /// Show the sites of the shape near `p` and return the site an end at `p` would glue to.
+    fn update_sites(&mut self, p: Point, tol: f64, exclude: Option<ShapeId>) -> Option<(ShapeId, u32, Point)> {
+        let (sites, glue) = match self.active() {
+            Some(st) => {
+                let shapes = st.shapes();
+                let near = crate::connect::site_shape_at(&st.doc, &st.selection, shapes, p, tol * 3.0, exclude);
+                let sites = near
+                    .and_then(|id| shapes.iter().find(|s| s.id == id))
+                    .map(|s| crate::connect::sites(&st.doc, &st.selection, s))
+                    .unwrap_or_default();
+                (sites, crate::connect::nearest_site(&st.doc, &st.selection, shapes, p, (tol * 2.0).max(6.0), exclude))
+            }
+            None => (vec![], None),
+        };
+        self.tool.sites = sites;
+        self.tool.glue = glue.map(|g| g.2);
+        glue
     }
 
     fn set_xfrm(&mut self, id: ShapeId, x: Xfrm) -> Result<()> {
