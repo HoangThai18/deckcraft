@@ -1,0 +1,414 @@
+# Release pipeline: every push to `release` builds installers for every platform and creates or
+# updates the draft GitHub Release "SlideCraft v<version>" (tag v<version>). Recipe:
+# craftrules release/playbook.md.
+#
+# The version has one source: `[workspace.package] version` in Cargo.toml (`cargo xtask version`,
+# `cargo xtask version set X.Y.Z`). The app shows it in About and `--version`; the release name
+# and tag use it too. workflow_dispatch can override it for a test build (applied to the build).
+#
+# All jobs run in the `release` environment (restricted to the `release` branch), which holds
+# the signing secrets. Every secret is optional: missing ones produce unsigned artifacts and a
+# warning, never a failed build.
+name: Release
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version override for a test run, e.g. 0.2.0-rc.1 (empty: Cargo.toml)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  # Never cancel a run mid-notarization or mid-upload; a newer push waits its turn.
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
+  SLIDECRAFT_BUILD_SHA: ${{ github.sha }}
+  INPUT_VERSION: ${{ inputs.version }}
+  # Optional font input (storytold/craft-fonts docs/integration.md); releases always embed it.
+  # This commit adds fonts/latin-manifest.txt (the Latin presentation fonts).
+  CRAFT_FONTS_REF: 43913056ce82a3fdad0ef69f6b88d1dc922a8104
+
+jobs:
+  version:
+    name: version
+    runs-on: ubuntu-latest
+    environment: release
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      date: ${{ steps.v.outputs.date }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        name: Resolve version
+        run: |
+          . packaging/common.sh
+          v="${INPUT_VERSION#v}"
+          v="${v:-$VERSION}"
+          if ! printf '%s' "$v" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
+            echo "::error::'$v' is not a version like 1.2.3 or 1.2.3-rc.1"
+            exit 1
+          fi
+          case "$v" in *-*) pre=true ;; *) pre=false ;; esac
+          {
+            echo "version=$v"
+            echo "date=$(date -u +%Y-%m-%d)"
+            echo "prerelease=$pre"
+          } >>"$GITHUB_OUTPUT"
+          echo "### SlideCraft v$v (\`${GITHUB_SHA::9}\`)" >>"$GITHUB_STEP_SUMMARY"
+
+  macos:
+    name: macOS universal
+    needs: version
+    runs-on: macos-15
+    environment: release
+    env:
+      SLIDECRAFT_VERSION: ${{ needs.version.outputs.version }}
+      SLIDECRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out craft-fonts
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          repository: storytold/craft-fonts
+          ref: ${{ env.CRAFT_FONTS_REF }}
+          path: craft-fonts
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-macos-universal
+      - name: Apply version override
+        if: inputs.version != ''
+        run: cargo xtask version set "$SLIDECRAFT_VERSION"
+      - name: Import signing certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: packaging/macos/import-cert.sh
+      - name: Build, sign, notarize
+        env:
+          CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+          CRAFT_FONTS_REQUIRED: "1"
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: packaging/macos/package.sh --arch universal
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: dist/release/*
+          if-no-files-found: error
+      - name: Remove temporary keychain
+        if: always()
+        run: |
+          if [ -n "${MACOS_KEYCHAIN:-}" ]; then security delete-keychain "$MACOS_KEYCHAIN" || true; fi
+
+  windows:
+    name: Windows ${{ matrix.arch }}
+    needs: version
+    runs-on: windows-latest
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64, target: x86_64-pc-windows-msvc }
+          - { arch: x86, target: i686-pc-windows-msvc }
+    env:
+      SLIDECRAFT_VERSION: ${{ needs.version.outputs.version }}
+      SLIDECRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out craft-fonts
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          repository: storytold/craft-fonts
+          ref: ${{ env.CRAFT_FONTS_REF }}
+          path: craft-fonts
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-windows-${{ matrix.arch }}
+      - name: Apply version override
+        if: inputs.version != ''
+        shell: bash
+        run: cargo xtask version set "$SLIDECRAFT_VERSION"
+      - name: Install WiX
+        shell: pwsh
+        run: dotnet tool install --global wix --version 5.0.2
+      - name: Build, sign, package
+        shell: pwsh
+        env:
+          CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+          CRAFT_FONTS_REQUIRED: "1"
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          AZURE_CERT_PROFILE: ${{ secrets.AZURE_CERT_PROFILE }}
+        run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-${{ matrix.arch }}
+          path: dist/release/*
+          if-no-files-found: error
+
+  linux:
+    name: Linux ${{ matrix.arch }}
+    needs: version
+    # The oldest GitHub-hosted image, so the binaries only need glibc >= 2.35 (Ubuntu 22.04+,
+    # Debian 12+, Fedora 36+, RHEL 10).
+    runs-on: ${{ matrix.runner }}
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: ubuntu-22.04, deb: amd64 }
+          - { arch: aarch64, runner: ubuntu-22.04-arm, deb: arm64 }
+    env:
+      SLIDECRAFT_VERSION: ${{ needs.version.outputs.version }}
+      SLIDECRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      NFPM_VERSION: 2.47.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out craft-fonts
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          repository: storytold/craft-fonts
+          ref: ${{ env.CRAFT_FONTS_REF }}
+          path: craft-fonts
+      - name: Install build and packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev \
+            desktop-file-utils appstream python3-yaml
+          curl -fsSL -o "$RUNNER_TEMP/nfpm.deb" \
+            "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_${{ matrix.deb }}.deb"
+          sudo dpkg -i "$RUNNER_TEMP/nfpm.deb"
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-linux-${{ matrix.arch }}
+      - name: Apply version override
+        if: inputs.version != ''
+        run: cargo xtask version set "$SLIDECRAFT_VERSION"
+      - name: Build and package (AppImage, deb, rpm, tar.gz)
+        env:
+          CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+          CRAFT_FONTS_REQUIRED: "1"
+        run: packaging/linux/package.sh
+      - name: Check the packages
+        run: |
+          dpkg-deb --info dist/release/*.deb
+          dpkg-deb --contents dist/release/*.deb | grep -E 'usr/bin/slidecraft$|metainfo|applications'
+          ldd target/release/slidecraft
+          for appimage in dist/release/*.AppImage; do
+            chmod +x "$appimage"
+            APPIMAGE_EXTRACT_AND_RUN=1 "$appimage" --version
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-${{ matrix.arch }}
+          path: dist/release/*
+          if-no-files-found: error
+
+  flatpak:
+    name: Linux Flatpak
+    needs: version
+    runs-on: ubuntu-latest
+    environment: release
+    # Best effort: Flathub builds from source itself (playbook §7); the bundle is a convenience.
+    continue-on-error: true
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
+      options: --privileged
+    env:
+      SLIDECRAFT_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply version override
+        if: inputs.version != ''
+        run: |
+          # No cargo in this container: the same edit `cargo xtask version set` makes.
+          sed -i "0,/^version = \".*\"/s//version = \"$SLIDECRAFT_VERSION\"/" Cargo.toml
+          grep -m1 '^version' Cargo.toml
+      - name: Vendor the crate sources (flatpak builds run offline)
+        run: |
+          dnf install -y python3-pip
+          pip3 install --quiet aiohttp tomlkit
+          curl -fsSL -o "$RUNNER_TEMP/flatpak-cargo-generator.py" \
+            https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
+          python3 "$RUNNER_TEMP/flatpak-cargo-generator.py" Cargo.lock -o packaging/linux/flatpak/cargo-sources.json
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: packaging/linux/flatpak/ai.storyteller.slidecraft.yml
+          bundle: slidecraft-${{ needs.version.outputs.version }}-linux-x86_64.flatpak
+          upload-artifact: false
+          cache-key: flatpak-builder-${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-flatpak
+          path: slidecraft-*.flatpak
+          if-no-files-found: error
+
+  freebsd:
+    name: FreeBSD x86_64
+    needs: version
+    runs-on: ubuntu-latest
+    environment: release
+    timeout-minutes: 240
+    env:
+      SLIDECRAFT_VERSION: ${{ needs.version.outputs.version }}
+      SLIDECRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      VERSION_OVERRIDE: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out craft-fonts
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          repository: storytold/craft-fonts
+          ref: ${{ env.CRAFT_FONTS_REF }}
+          path: craft-fonts
+      - name: Build and package in a FreeBSD VM
+        uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc # v1
+        with:
+          release: "14.3"
+          usesh: true
+          cpu: 4
+          mem: 12288
+          envs: SLIDECRAFT_VERSION SLIDECRAFT_BUILD_DATE SLIDECRAFT_BUILD_SHA VERSION_OVERRIDE
+          # Copies the workspace (with dist/release) back; the target dir lives outside it so the
+          # copy stays small.
+          copyback: true
+          prepare: |
+            pkg install -y bash git curl pkgconf cmake python3 libxkbcommon wayland libX11 libXcursor libXrandr libXi libxcb mesa-libs vulkan-loader fontconfig freetype2
+            curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
+          run: |
+            . "$HOME/.cargo/env"
+            git config --global --add safe.directory "*"
+            export CARGO_TARGET_DIR="$HOME/target" CRAFT_FONTS_DIR="$PWD/craft-fonts" CRAFT_FONTS_REQUIRED=1
+            if [ -n "$VERSION_OVERRIDE" ]; then cargo xtask version set "$SLIDECRAFT_VERSION"; fi
+            bash packaging/freebsd/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-freebsd
+          path: dist/release/*
+          if-no-files-found: error
+
+  web:
+    name: Web (wasm)
+    needs: version
+    runs-on: ubuntu-latest
+    environment: release
+    env:
+      SLIDECRAFT_VERSION: ${{ needs.version.outputs.version }}
+      SLIDECRAFT_BUILD_DATE: ${{ needs.version.outputs.date }}
+      TRUNK_VERSION: 0.21.14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out craft-fonts
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          repository: storytold/craft-fonts
+          ref: ${{ env.CRAFT_FONTS_REF }}
+          path: craft-fonts
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-web
+      - name: Install trunk
+        run: |
+          curl -fsSL "https://github.com/trunk-rs/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C "$HOME/.cargo/bin" trunk
+          trunk --version
+      - name: Apply version override
+        if: inputs.version != ''
+        run: cargo xtask version set "$SLIDECRAFT_VERSION"
+      - name: Build and zip
+        env:
+          CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+          CRAFT_FONTS_REQUIRED: "1"
+        run: packaging/web/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-web
+          path: dist/release/*
+          if-no-files-found: error
+
+  release:
+    name: Draft GitHub Release
+    needs: [version, macos, windows, linux, flatpak, freebsd, web]
+    # The installers are required; the Flatpak bundle and FreeBSD tarball are attached when they
+    # built.
+    if: >-
+      !cancelled() && needs.version.result == 'success' && needs.macos.result == 'success' &&
+      needs.windows.result == 'success' && needs.linux.result == 'success' && needs.web.result == 'success'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      PRERELEASE: ${{ needs.version.outputs.prerelease }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: artifacts
+          merge-multiple: true
+      - name: Checksums
+        working-directory: artifacts
+        run: |
+          sha256sum -- * | tee SHA256SUMS.txt
+      - name: Create or update the draft release
+        working-directory: artifacts
+        run: |
+          tag="v$VERSION"
+          title="SlideCraft v$VERSION"
+          pre=()
+          if [ "$PRERELEASE" = true ]; then pre=(--prerelease); fi
+          if draft="$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            if [ "$draft" != "true" ]; then
+              echo "::error::Release $tag is already published. Bump the version (cargo xtask version set) before pushing to release."
+              exit 1
+            fi
+            echo "Updating draft $tag: replacing its assets"
+            gh release view "$tag" --json assets --jq '.assets[].name' | while read -r asset; do
+              gh release delete-asset "$tag" "$asset" --yes
+            done
+            gh release edit "$tag" --draft --title "$title" --target "$GITHUB_SHA" --prerelease="$PRERELEASE"
+            gh release upload "$tag" --clobber -- *
+          else
+            echo "Creating draft $tag"
+            gh release create "$tag" --draft --title "$title" --target "$GITHUB_SHA" --generate-notes "${pre[@]}" -- *
+          fi
+          {
+            echo "Draft release **$title** at \`${GITHUB_SHA::9}\`:"
+            echo
+            sed 's/^/    /' SHA256SUMS.txt
+          } >>"$GITHUB_STEP_SUMMARY"

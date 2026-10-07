@@ -738,7 +738,7 @@ pub fn about(_app: &mut SlideApp, ui: &mut Ui) {
         let (r, _) = ui.allocate_exact_size(vec2(64.0, 64.0), Sense::hover());
         paint_logo(ui.painter(), r);
         ui.label(egui::RichText::new("SlideCraft").font(theme::bold(22.0)));
-        ui.label(egui::RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).color(t.text_dim));
+        ui.label(egui::RichText::new(version_line()).color(t.text_dim));
         ui.add_space(6.0);
         ui.label("Presentations and slide shows, rebuilt from scratch in pure Rust.");
         ui.label("An open-source, clean-room project. Not affiliated with Microsoft.");
@@ -749,6 +749,21 @@ pub fn about(_app: &mut SlideApp, ui: &mut Ui) {
         ui.add_space(6.0);
         ui.label(egui::RichText::new("MIT OR Apache-2.0 · © 2026 ArtCraft Team and the SlideCraft contributors").size(11.0).color(t.text_faint));
     });
+}
+
+/// "Version X.Y.Z" plus, for release builds, the short commit and build date. The version comes
+/// from `[workspace.package] version` (the single source of truth, `cargo xtask version`); the
+/// release workflow sets `SLIDECRAFT_BUILD_SHA` / `SLIDECRAFT_BUILD_DATE` at build time.
+pub fn version_line() -> String {
+    let mut s = format!("Version {}", env!("CARGO_PKG_VERSION"));
+    let sha = option_env!("SLIDECRAFT_BUILD_SHA").map(|s| s.get(..9).unwrap_or(s)).filter(|s| !s.is_empty());
+    let date = option_env!("SLIDECRAFT_BUILD_DATE").filter(|s| !s.is_empty());
+    match (sha, date) {
+        (Some(sha), Some(date)) => s.push_str(&format!(" ({sha}, {date})")),
+        (Some(x), None) | (None, Some(x)) => s.push_str(&format!(" ({x})")),
+        (None, None) => {}
+    }
+    s
 }
 
 /// SlideCraft's mark, drawn in code: a slide card with a play triangle in our orange.

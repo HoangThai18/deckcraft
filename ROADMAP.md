@@ -31,8 +31,13 @@ format plus PPTX), scriptable by agents (CLI, JSON control channel, MCP), and av
   palette, light/dark.
 - Automation: ~200 commands, every one reachable from `slidecraft-cli`, the app's JSON control
   channel and the MCP server (headless or connected to the running app).
+- Web: `apps/slidecraft-web` runs the same UI in the browser (trunk; WebGPU with WebGL2 fallback),
+  opening the sample deck; Open/Insert use the browser file picker, Save/Export download.
+- Release CI: pushes to `release` build a draft GitHub Release (macOS universal dmg, Windows
+  x64/x86 msi + zip, Linux AppImage/deb/rpm/tar.gz + Flatpak, FreeBSD tar.gz, web zip); signing
+  secrets live in the `release` environment. Version: `cargo xtask version`.
 
-**In progress:** PPTX import/export · web (WASM) build · release packaging for all platforms.
+**In progress:** PPTX import/export · first signed release run.
 
 **Next (in order):** vector PDF artwork · audio/video playback · Format Shape pane depth · connectors with
 glue, freeform and edit points · merge shapes · Animation Pane polish · native macOS menu bar ·

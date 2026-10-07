@@ -498,6 +498,9 @@ impl SlideApp {
         }
         self.collect_screenshots(ctx);
         self.issue_screenshots(ctx);
+        // On the web, dropped files can only be read asynchronously: the host reads them and
+        // delivers them through `Services::inbox`.
+        #[cfg(not(target_arch = "wasm32"))]
         for f in ctx.input(|i| i.raw.dropped_files.clone()) {
             let name = f.path().file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "dropped file".into());
             match f.bytes() {
@@ -749,6 +752,5 @@ pub fn now_ms() -> f64 {
 
 #[cfg(target_arch = "wasm32")]
 fn js_now() -> f64 {
-    // egui's input time is good enough for UI timing on the web.
-    0.0
+    js_sys::Date::now()
 }

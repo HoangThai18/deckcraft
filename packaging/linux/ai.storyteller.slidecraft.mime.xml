@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-slidecraft">
+    <comment>SlideCraft presentation</comment>
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.slidecraft"/>
+    <icon name="ai.storyteller.slidecraft"/>
+  </mime-type>
+</mime-info>

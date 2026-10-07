@@ -1,0 +1,56 @@
+# Flatpak manifest for SlideCraft, ready for a Flathub submission.
+#
+# Flatpak builds run offline, so the crate sources must be vendored first. From the repo root:
+#
+#   curl -fsSLO https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
+#   python3 flatpak-cargo-generator.py Cargo.lock -o packaging/linux/flatpak/cargo-sources.json
+#   flatpak-builder --user --install --force-clean build-flatpak packaging/linux/flatpak/ai.storyteller.slidecraft.yml
+#   flatpak run ai.storyteller.slidecraft
+#
+# For Flathub, replace the `dir` source with a `git` source pinned to a release tag and commit.
+id: ai.storyteller.slidecraft
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: slidecraft
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Open/Save dialogs use the file-chooser portal (rfd), and drag-and-drop uses the document
+  # portal, so broad filesystem access isn't needed. Documents is granted for opening decks by
+  # path from the command line.
+  - --filesystem=xdg-documents
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+modules:
+  - name: slidecraft
+    buildsystem: simple
+    build-options:
+      env:
+        CARGO_HOME: /run/build/slidecraft/cargo
+        CARGO_NET_OFFLINE: 'true'
+    build-commands:
+      - cargo --offline build --release --locked -p slidecraft
+      - install -Dm755 target/release/slidecraft /app/bin/slidecraft
+      - install -Dm644 packaging/linux/ai.storyteller.slidecraft.desktop /app/share/applications/ai.storyteller.slidecraft.desktop
+      - install -Dm644 packaging/linux/ai.storyteller.slidecraft.mime.xml /app/share/mime/packages/ai.storyteller.slidecraft.xml
+      - mkdir -p /app/share/icons && cp -R assets/app-icon/hicolor /app/share/icons/
+      - >-
+        version=$(awk '/^\[/{p=($0=="[workspace.package]");next} p&&$1=="version"{gsub(/[" ]/,"",$3);print $3;exit}' Cargo.toml);
+        install -d /app/share/metainfo;
+        sed -e "s/@VERSION@/$version/" -e "s/@DATE@/$(date -u +%Y-%m-%d)/"
+        packaging/linux/ai.storyteller.slidecraft.metainfo.xml.in > /app/share/metainfo/ai.storyteller.slidecraft.metainfo.xml
+    sources:
+      - type: dir
+        path: ../../..
+        skip:
+          - target
+          - dist
+          - corpus
+          - build-flatpak
+          - .flatpak-builder
+      - cargo-sources.json
