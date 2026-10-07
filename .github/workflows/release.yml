@@ -42,6 +42,9 @@ env:
 jobs:
   version:
     name: version
+    # Only the release branch builds (a manual dispatch from any other ref skips everything). The
+    # branch itself is writable only by release-managers and org admins (ruleset "release").
+    if: github.ref == 'refs/heads/release'
     runs-on: ubuntu-latest
     environment: release
     outputs:
