@@ -12,6 +12,7 @@ pub mod connect;
 pub mod guard;
 pub mod keys;
 pub mod links;
+pub mod recovery;
 pub mod sample;
 pub mod tools;
 
@@ -213,6 +214,8 @@ pub struct Prefs {
     pub smart_quotes: bool,
     pub author: String,
     pub undo_limit: usize,
+    /// Minutes between AutoRecover saves of unsaved presentations.
+    pub recovery_minutes: f64,
 }
 
 impl Default for Prefs {
@@ -226,6 +229,7 @@ impl Default for Prefs {
             smart_quotes: true,
             author: "Presenter".into(),
             undo_limit: 500,
+            recovery_minutes: 1.0,
         }
     }
 }
@@ -270,6 +274,8 @@ pub struct Session {
     /// Nesting of commands run by commands: only the outermost one is an undo step and a journal
     /// entry.
     depth: u32,
+    /// Crash-recovery folder (the app sets it; saving or closing a presentation removes its entry).
+    pub recovery_dir: Option<std::path::PathBuf>,
 }
 
 impl Default for Session {
@@ -293,6 +299,7 @@ impl Session {
             default_look: None,
             painter: None,
             depth: 0,
+            recovery_dir: None,
         }
     }
     /// A session with one new presentation open.
@@ -331,7 +338,10 @@ impl Session {
     }
     pub fn close_document(&mut self, i: usize) {
         if i < self.docs.len() {
-            self.docs.remove(i);
+            let d = self.docs.remove(i);
+            if let Some(dir) = &self.recovery_dir {
+                recovery::discard(dir, d.uid);
+            }
             self.active = if self.docs.is_empty() { None } else { Some(i.min(self.docs.len() - 1)) };
         }
     }

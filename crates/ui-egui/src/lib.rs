@@ -191,6 +191,10 @@ pub struct SlideApp {
     restyle: bool,
     fonts_ready: bool,
     last_time: f64,
+    /// When AutoRecover data was last written (seconds, egui time).
+    pub last_recovery: f64,
+    /// Quit was confirmed (changes saved or discarded): let the window close.
+    pub quit_confirmed: bool,
     pub(crate) notes_buf: (u64, usize, String),
     /// Thumbnail pane drag (slide index, current drop index).
     pub(crate) thumb_drag: Option<(usize, usize)>,
@@ -222,6 +226,8 @@ impl SlideApp {
             restyle: true,
             fonts_ready: false,
             last_time: 0.0,
+            last_recovery: 0.0,
+            quit_confirmed: false,
             notes_buf: (0, usize::MAX, String::new()),
             thumb_drag: None,
         }
@@ -398,6 +404,20 @@ impl SlideApp {
         }
     }
 
+    /// Save every presentation with unsaved changes (asking for a location where needed).
+    /// Returns false if one wasn't saved (cancelled or failed).
+    pub fn save_all(&mut self) -> bool {
+        let dirty: Vec<usize> = self.session.documents().iter().enumerate().filter(|(_, d)| d.is_dirty()).map(|(i, _)| i).collect();
+        for i in dirty {
+            self.session.set_active(i);
+            self.save();
+            if self.session.documents().get(i).is_some_and(|d| d.is_dirty()) {
+                return false;
+            }
+        }
+        true
+    }
+
     pub fn save(&mut self) {
         if self.session.active().and_then(|d| d.path.clone()).is_some() {
             match self.session.execute("file.save", &json!({})) {
@@ -498,6 +518,23 @@ impl SlideApp {
         }
         self.collect_screenshots(ctx);
         self.issue_screenshots(ctx);
+        // Closing the window with unsaved changes asks first.
+        if ctx.input(|i| i.viewport().close_requested()) && !self.quit_confirmed && self.session.documents().iter().any(|d| d.is_dirty()) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            self.show = None;
+            if self.dialog.as_ref().is_none_or(|d| d.id != "quit") {
+                self.dialog = Some(dialogs::Dialog::new("quit"));
+            }
+        }
+        // AutoRecover: unsaved presentations are written to the recovery folder periodically.
+        if self.session.recovery_dir.is_some() && now - self.last_recovery > (self.session.prefs.recovery_minutes * 60.0).max(10.0) {
+            self.last_recovery = now;
+            if self.session.documents().iter().any(|d| d.is_dirty())
+                && let Err(e) = self.session.execute("file.recovery.save", &json!({}))
+            {
+                self.set_status(format!("Couldn't save AutoRecover information: {e}"));
+            }
+        }
         // On the web, dropped files can only be read asynchronously: the host reads them and
         // delivers them through `Services::inbox`.
         #[cfg(not(target_arch = "wasm32"))]

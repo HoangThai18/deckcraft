@@ -52,6 +52,11 @@ impl Session {
                     st.revision = revision.max(st.revision).saturating_add(1);
                 }
                 log::error!("command `{id}` panicked: {msg}");
+                if let Some(dir) = self.recovery_dir.clone()
+                    && let Err(e) = crate::recovery::save(self, &dir)
+                {
+                    log::error!("recovery save after `{id}` failed: {e}");
+                }
                 Err(EngineError::Internal(id.to_string(), msg))
             }
         }

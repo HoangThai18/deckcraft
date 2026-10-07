@@ -27,6 +27,10 @@ pub fn specs() -> Vec<CommandSpec> {
             has_doc,
             properties
         ),
+        cmd!(noundo "file.recovery.save", "Save AutoRecover Information", [], None, "{} → {written}", has_doc, recovery_save),
+        cmd!(query "file.recovery.list", "Recovered Presentations", [], None, "{} → [{uid, path, title, saved}]", always, recovery_list),
+        cmd!(noundo "file.recovery.open", "Open Recovered Presentations", [], None, "{} → {opened: [document index]}", always, recovery_open),
+        cmd!(noundo "file.recovery.discard", "Discard Recovered Presentations", [], None, "{uid?: one entry, else all}", always, recovery_discard),
         cmd!(noundo "file.revert", "Revert", [], None, "{}", has_doc, revert),
         cmd!(noundo "window.next", "Next Window", ["Window"], Some("Cmd+`"), "{index?}", has_doc, next_window),
     ]
@@ -156,6 +160,10 @@ fn mark_saved(s: &mut Session, path: Option<String>) -> Result<()> {
         st.path = path;
     }
     st.revision += 1;
+    let uid = st.uid;
+    if let Some(dir) = &s.recovery_dir {
+        crate::recovery::discard(dir, uid);
+    }
     Ok(())
 }
 
@@ -311,5 +319,47 @@ fn next_window(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let i = usize_param(p, "index").unwrap_or_else(|| (s.active_index().unwrap_or(0) + 1) % n);
     s.set_active(i.min(n - 1));
+    ok()
+}
+
+fn recovery_dir(s: &Session) -> Result<std::path::PathBuf> {
+    s.recovery_dir.clone().ok_or_else(|| EngineError::Other("no recovery folder is set".into()))
+}
+
+fn recovery_save(s: &mut Session, _p: &Value) -> Result<Value> {
+    let dir = recovery_dir(s)?;
+    Ok(json!({"written": crate::recovery::save(s, &dir)?}))
+}
+
+fn recovery_list(s: &mut Session, _p: &Value) -> Result<Value> {
+    let dir = recovery_dir(s)?;
+    Ok(Value::Array(
+        crate::recovery::list(&dir)
+            .into_iter()
+            .map(|(uid, mut m)| {
+                if let Some(o) = m.as_object_mut() {
+                    o.insert("uid".into(), json!(uid));
+                }
+                m
+            })
+            .collect(),
+    ))
+}
+
+fn recovery_open(s: &mut Session, _p: &Value) -> Result<Value> {
+    let dir = recovery_dir(s)?;
+    Ok(json!({"opened": crate::recovery::open(s, &dir)?}))
+}
+
+fn recovery_discard(s: &mut Session, p: &Value) -> Result<Value> {
+    let dir = recovery_dir(s)?;
+    match p.get("uid").and_then(Value::as_u64) {
+        Some(uid) => crate::recovery::discard(&dir, uid),
+        None => {
+            for (uid, _) in crate::recovery::list(&dir) {
+                crate::recovery::discard(&dir, uid);
+            }
+        }
+    }
     ok()
 }

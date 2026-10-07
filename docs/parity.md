@@ -15,14 +15,14 @@ Live Presentations), add-ins and VBA macros.
 
 | Priority | Features | Done | Partial | Missing | Parity |
 |---|---|---|---|---|---|
-| P0 | 72 | 58 | 13 | 1 | 90% |
+| P0 | 72 | 59 | 12 | 1 | 90% |
 | P1 | 65 | 35 | 23 | 7 | 72% |
 | P2 | 50 | 11 | 11 | 28 | 33% |
 
 | Area | Parity |
 |---|---|
 | Application shell | 71% |
-| Files | 67% |
+| Files | 71% |
 | Slides | 95% |
 | Views | 90% |
 | Masters & themes | 80% |
@@ -44,7 +44,7 @@ Live Presentations), add-ins and VBA macros.
 | Automation (✱) | 100% |
 | Platforms (✱) | 25% |
 
-Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Shape Format, Picture Format, Table Design/Layout, Chart Design), Autosave and crash recovery, Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending), Format background (solid, gradient, picture, pattern), Gradient fill (linear, radial, rectangular, path), Format Shape pane, Edit chart data, Crop (and crop to shape, aspect ratio), Insert audio (any common format), Audio/video playback in the show, Animation pane (reorder, timing), Presenter view (notes, next slide, timer), macOS, Windows, Linux builds.
+Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Shape Format, Picture Format, Table Design/Layout, Chart Design), Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending), Format background (solid, gradient, picture, pattern), Gradient fill (linear, radial, rectangular, path), Format Shape pane, Edit chart data, Crop (and crop to shape, aspect ratio), Insert audio (any common format), Audio/video playback in the show, Animation pane (reorder, timing), Presenter view (notes, next slide, timer), macOS, Windows, Linux builds.
 
 ## Rows
 
@@ -68,7 +68,7 @@ Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Sh
 | Files | Open/save .potx/.ppsx/.pptm variants | P2 | M |
 | Files | Legacy .ppt (binary) import | P2 | M |
 | Files | Save as template | P1 | D |
-| Files | Autosave and crash recovery | P0 | P |
+| Files | Autosave and crash recovery | P0 | D |
 | Files | Document properties | P2 | D |
 | Files | Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending) | P0 | P |
 | Files | Export slides as PNG/JPEG | P0 | D |

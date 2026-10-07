@@ -162,6 +162,15 @@ fn main() -> eframe::Result {
         Box::new(move |cc| {
             let mut app = SlideApp::new(Session::new(), services());
             load_prefs(&mut app);
+            // AutoRecover: reopen what a previous run left unsaved, then keep it current.
+            if std::env::var_os("SLIDECRAFT_NO_RECOVERY").is_none() {
+                app.session.recovery_dir = slidecraft_engine::recovery::default_dir();
+                if let Ok(v) = app.session.execute("file.recovery.open", &serde_json::json!({}))
+                    && let Some(n) = v.get("opened").and_then(|o| o.as_array()).map(Vec::len).filter(|n| *n > 0)
+                {
+                    app.set_status(format!("Recovered {n} unsaved presentation{} from the last session", if n == 1 { "" } else { "s" }));
+                }
+            }
             app.integrated_titlebar = cfg!(target_os = "macos");
             if let Some(port) = control_port {
                 let rx = control_server::start(port, cc.egui_ctx.clone());
