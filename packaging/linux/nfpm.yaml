@@ -32,6 +32,7 @@ overrides:
       - libc6 (>= 2.35)
       - libgcc-s1
       - libxkbcommon0
+      - libasound2 | libasound2t64
       - libvulkan1 | libegl1
     recommends:
       - libwayland-client0
@@ -45,6 +46,7 @@ overrides:
   rpm:
     depends:
       - libxkbcommon
+      - alsa-lib
       - (vulkan-loader or libglvnd-egl)
     recommends:
       - libwayland-client

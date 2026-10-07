@@ -6,7 +6,8 @@
 # Usage: packaging/freebsd/package.sh [--skip-build]
 #
 # Run on FreeBSD (CI: a FreeBSD 14 VM via vmactions/freebsd-vm). Runtime needs: libxkbcommon,
-# wayland or libX11, and mesa (Vulkan or EGL): `pkg install libxkbcommon libX11 mesa-libs vulkan-loader`.
+# wayland or libX11, mesa (Vulkan or EGL) and alsa-lib:
+# `pkg install libxkbcommon libX11 mesa-libs vulkan-loader alsa-lib`.
 set -euo pipefail
 # shellcheck source=../common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/../common.sh"

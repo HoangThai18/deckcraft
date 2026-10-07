@@ -204,7 +204,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev \
+            libasound2-dev libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev \
             desktop-file-utils appstream python3-yaml
           curl -fsSL -o "$RUNNER_TEMP/nfpm.deb" \
             "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_${{ matrix.deb }}.deb"
@@ -236,9 +236,29 @@ jobs:
           path: dist/release/*
           if-no-files-found: error
 
+  flatpak-sources:
+    name: Flatpak crate sources
+    needs: version
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vendor the crate sources (flatpak builds run offline)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet aiohttp tomlkit
+          curl -fsSL -o "$RUNNER_TEMP/flatpak-cargo-generator.py" \
+            https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
+          "$RUNNER_TEMP/venv/bin/python" "$RUNNER_TEMP/flatpak-cargo-generator.py" Cargo.lock -o cargo-sources.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-cargo-sources
+          path: cargo-sources.json
+          if-no-files-found: error
+
   flatpak:
     name: Linux Flatpak
-    needs: version
+    needs: [version, flatpak-sources]
     runs-on: ubuntu-latest
     environment: release
     # Best effort: Flathub builds from source itself (playbook §7); the bundle is a convenience.
@@ -256,13 +276,10 @@ jobs:
           # No cargo in this container: the same edit `cargo xtask version set` makes.
           sed -i "0,/^version = \".*\"/s//version = \"$DECKCRAFT_VERSION\"/" Cargo.toml
           grep -m1 '^version' Cargo.toml
-      - name: Vendor the crate sources (flatpak builds run offline)
-        run: |
-          dnf install -y python3-pip
-          pip3 install --quiet aiohttp tomlkit
-          curl -fsSL -o "$RUNNER_TEMP/flatpak-cargo-generator.py" \
-            https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
-          python3 "$RUNNER_TEMP/flatpak-cargo-generator.py" Cargo.lock -o packaging/linux/flatpak/cargo-sources.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: flatpak-cargo-sources
+          path: packaging/linux/flatpak
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           manifest-path: packaging/linux/flatpak/ai.storyteller.deckcraft.yml
@@ -305,7 +322,7 @@ jobs:
           # copy stays small.
           copyback: true
           prepare: |
-            pkg install -y bash git curl pkgconf cmake python3 libxkbcommon wayland libX11 libXcursor libXrandr libXi libxcb mesa-libs vulkan-loader fontconfig freetype2
+            pkg install -y bash git curl pkgconf cmake python3 libxkbcommon wayland libX11 libXcursor libXrandr libXi libxcb mesa-libs vulkan-loader fontconfig freetype2 alsa-lib
             curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
           run: |
             . "$HOME/.cargo/env"
