@@ -74,7 +74,7 @@ fn color_button(
     ui.horizontal(|ui| {
         ui.label(label);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let r = ui.add(egui::Button::new("Color ▾").min_size(vec2(70.0, 22.0)));
+            let r = widgets::drop_button(ui, "Color", vec2(70.0, 22.0), true);
             egui::Popup::menu(&r).show(|ui| {
                 if let Some(c) = widgets::color_grid(ui, &sc, none_label) {
                     let (id, p) = on_pick(c);
@@ -293,19 +293,16 @@ fn format_shape(app: &mut SlideApp, ui: &mut Ui) {
                     let _ = app.run("shape.fill", json!({"transparency": v as f64 / 100.0}));
                 }
             });
-            if kind == "gradient" {
-                ui.horizontal(|ui| {
-                    ui.label("Angle");
-                    for a in [0, 45, 90, 135, 180, 270] {
-                        if ui.small_button(format!("{a}°")).clicked() {
-                            run(
-                                app,
-                                "shape.fill",
-                                json!({"gradient": {"stops": [[0, "accent1"], [1, {"scheme": "accent1", "lumMod": 50000}]], "angle": a}}),
-                            );
-                        }
-                    }
-                });
+            if let Some(Fill::Gradient(g)) = &sh.fill {
+                let sc = scheme(app);
+                if let Some(ng) = crate::fillui::gradient_editor(ui, "shape-grad", g, &sc) {
+                    run(app, "shape.fill", json!({"gradient": crate::fillui::gradient_json(&ng)}));
+                }
+                let mut rot = g.rotate_with_shape;
+                if ui.checkbox(&mut rot, "Rotate with shape").changed() {
+                    let ng = slidecraft_model::style::Gradient { rotate_with_shape: rot, ..g.clone() };
+                    run(app, "shape.fill", json!({"gradient": crate::fillui::gradient_json(&ng)}));
+                }
             }
             ui.add_space(8.0);
             ui.label(egui::RichText::new("Line").font(theme::bold(13.0)));
@@ -343,46 +340,104 @@ fn format_shape(app: &mut SlideApp, ui: &mut Ui) {
 }
 
 fn background(app: &mut SlideApp, ui: &mut Ui) {
-    ui.label(egui::RichText::new("Fill").font(theme::bold(13.0)));
-    if ui.button("Solid fill: theme background").clicked() {
-        run(app, "design.background", json!({"color": "bg1"}));
-    }
     let sc = scheme(app);
-    ui.horizontal(|ui| {
-        ui.label("Color");
-        let r = ui.button("Color ▾");
-        egui::Popup::menu(&r).show(|ui| {
-            if let Some(Some(c)) = widgets::color_grid(ui, &sc, None) {
-                run(app, "design.background", json!({"color": cref_param(&c)}));
-            }
-        });
-    });
-    ui.label("Gradient presets");
-    ui.horizontal_wrapped(|ui| {
-        for (a, b) in [("accent1", "accent4"), ("accent2", "accent6"), ("dk2", "accent1"), ("lt2", "bg1"), ("accent3", "accent5")] {
-            let (r, resp) = ui.allocate_exact_size(vec2(44.0, 26.0), Sense::click());
-            let ca = theme::to_color32(sc.get(slidecraft_color::SchemeSlot::from_xml(a).unwrap_or(slidecraft_color::SchemeSlot::Accent1)));
-            let cb = theme::to_color32(sc.get(slidecraft_color::SchemeSlot::from_xml(b).unwrap_or(slidecraft_color::SchemeSlot::Accent1)));
-            let mut mesh = egui::Mesh::default();
-            mesh.colored_vertex(r.left_top(), ca);
-            mesh.colored_vertex(r.right_top(), cb);
-            mesh.colored_vertex(r.right_bottom(), cb);
-            mesh.colored_vertex(r.left_bottom(), ca);
-            mesh.add_triangle(0, 1, 2);
-            mesh.add_triangle(0, 2, 3);
-            ui.painter().add(egui::Shape::mesh(mesh));
-            if resp.clicked() {
-                run(app, "design.background", json!({"gradient": {"stops": [[0, a], [1, b]], "angle": 0}}));
+    let bg = app.session.active().and_then(|d| d.current_slide().and_then(|s| s.background.clone()));
+    let fill = match &bg {
+        Some(slidecraft_model::Background::Fill { fill }) => Some(fill.clone()),
+        _ => None,
+    };
+    let kind = match &fill {
+        Some(Fill::Solid { .. }) => "solid",
+        Some(Fill::Gradient(_)) => "gradient",
+        Some(Fill::Picture(_)) => "picture",
+        Some(Fill::Pattern(_)) => "pattern",
+        _ => "auto",
+    };
+    // What "Apply to All" re-applies: the current slide's background as command params.
+    let mut current: Option<Value> = None;
+    ui.label(egui::RichText::new("Fill").font(theme::bold(13.0)));
+    for (l, k) in [
+        ("Solid fill", "solid"),
+        ("Gradient fill", "gradient"),
+        ("Picture or texture fill", "picture"),
+        ("Pattern fill", "pattern"),
+        ("Follow the layout", "auto"),
+    ] {
+        if ui.radio(kind == k, l).clicked() && kind != k {
+            match k {
+                "solid" => run(app, "design.background", json!({"color": "bg1"})),
+                "gradient" => {
+                    let mut g = crate::fillui::default_gradient(slidecraft_model::ColorRef::scheme(slidecraft_color::SchemeSlot::Bg2), 90.0);
+                    g.rotate_with_shape = false;
+                    run(app, "design.background", json!({"gradient": crate::fillui::gradient_json(&g)}));
+                }
+                "picture" => {
+                    if let Some(pick) = app.services.pick_open.as_mut()
+                        && let Some(path) = pick("picture")
+                        && let Some(Ok(bytes)) = app.services.read.as_ref().map(|r| r(&path))
+                    {
+                        let _ = app.run("design.background", json!({"picture": slidecraft_engine::cmd::base64_encode(&bytes)}));
+                    }
+                }
+                "pattern" => run(app, "design.background", json!({"pattern": {"preset": "pct20", "fg": "accent1", "bg": "bg1"}})),
+                _ => run(app, "design.background", json!({"reset": true})),
             }
         }
-    });
-    if ui.button("Picture fill…").clicked()
-        && let Some(pick) = app.services.pick_open.as_mut()
-        && let Some(path) = pick("picture")
-        && let Some(Ok(bytes)) = app.services.read.as_ref().map(|r| r(&path))
-    {
-        let _ = app.run("design.background", json!({"picture": slidecraft_engine::cmd::base64_encode(&bytes)}));
     }
+    ui.add_space(4.0);
+    match &fill {
+        Some(Fill::Solid { color }) => {
+            current = Some(json!({"color": cref_param(color)}));
+            ui.horizontal(|ui| {
+                ui.label("Color");
+                let r = widgets::drop_button(ui, "Color", vec2(70.0, 20.0), true);
+                egui::Popup::menu(&r).show(|ui| {
+                    if let Some(Some(c)) = widgets::color_grid(ui, &sc, None) {
+                        run(app, "design.background", json!({"color": cref_param(&c)}));
+                    }
+                });
+            });
+        }
+        Some(Fill::Gradient(g)) => {
+            current = Some(json!({"gradient": crate::fillui::gradient_json(g)}));
+            if let Some(ng) = crate::fillui::gradient_editor(ui, "bg-grad", g, &sc) {
+                run(app, "design.background", json!({"gradient": crate::fillui::gradient_json(&ng)}));
+            }
+        }
+        Some(Fill::Pattern(pt)) => {
+            current = Some(json!({"pattern": {"preset": pt.preset, "fg": cref_param(&pt.fg), "bg": cref_param(&pt.bg)}}));
+            ui.horizontal_wrapped(|ui| {
+                for preset in ["pct5", "pct20", "pct50", "ltHorz", "ltVert", "smGrid", "dkDnDiag", "wave", "dotGrid", "weave"] {
+                    if ui.selectable_label(pt.preset == preset, preset).clicked() {
+                        run(app, "design.background", json!({"pattern": {"preset": preset, "fg": cref_param(&pt.fg), "bg": cref_param(&pt.bg)}}));
+                    }
+                }
+            });
+            for (label, fg) in [("Foreground", true), ("Background", false)] {
+                ui.horizontal(|ui| {
+                    ui.label(label);
+                    let r = widgets::drop_button(ui, "Color", vec2(70.0, 20.0), true);
+                    egui::Popup::menu(&r).show(|ui| {
+                        if let Some(Some(c)) = widgets::color_grid(ui, &sc, None) {
+                            let (f, b) = if fg { (c, pt.bg.clone()) } else { (pt.fg.clone(), c) };
+                            run(app, "design.background", json!({"pattern": {"preset": pt.preset, "fg": cref_param(&f), "bg": cref_param(&b)}}));
+                        }
+                    });
+                });
+            }
+        }
+        Some(Fill::Picture(_)) => {
+            if ui.button("Insert picture from file…").clicked()
+                && let Some(pick) = app.services.pick_open.as_mut()
+                && let Some(path) = pick("picture")
+                && let Some(Ok(bytes)) = app.services.read.as_ref().map(|r| r(&path))
+            {
+                let _ = app.run("design.background", json!({"picture": slidecraft_engine::cmd::base64_encode(&bytes)}));
+            }
+        }
+        _ => {}
+    }
+    ui.add_space(4.0);
     let hide = app.session.active().and_then(|d| d.current_slide().map(|s| !s.show_master_shapes)).unwrap_or(false);
     let mut h = hide;
     if ui.checkbox(&mut h, "Hide background graphics").changed() {
@@ -390,11 +445,11 @@ fn background(app: &mut SlideApp, ui: &mut Ui) {
     }
     ui.add_space(8.0);
     ui.horizontal(|ui| {
-        if ui.button("Apply to All").clicked() {
-            let bg = app.session.active().and_then(|d| d.current_slide().and_then(|s| s.background.clone()));
-            if let Some(slidecraft_model::Background::Fill { fill: Fill::Solid { color } }) = bg {
-                run(app, "design.background", json!({"color": cref_param(&color), "all": true}));
-            }
+        if ui.add_enabled(current.is_some(), egui::Button::new("Apply to All")).clicked()
+            && let Some(Value::Object(mut o)) = current.clone()
+        {
+            o.insert("all".into(), json!(true));
+            run(app, "design.background", Value::Object(o));
         }
         if ui.button("Reset Background").clicked() {
             run(app, "design.background", json!({"reset": true}));

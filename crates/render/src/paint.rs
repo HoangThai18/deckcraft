@@ -52,7 +52,11 @@ pub fn fill_path(
                 GradientShape::Path { focus, .. } => {
                     let fx = bounds.x0 + bounds.width() * (focus[0] + (1.0 - focus[2])) / 2.0;
                     let fy = bounds.y0 + bounds.height() * (focus[1] + (1.0 - focus[3])) / 2.0;
-                    let r = ((bounds.width() / 2.0).powi(2) + (bounds.height() / 2.0).powi(2)).sqrt();
+                    // Reach the farthest corner, so a gradient from a corner covers the whole box.
+                    let r = [(bounds.x0, bounds.y0), (bounds.x1, bounds.y0), (bounds.x0, bounds.y1), (bounds.x1, bounds.y1)]
+                        .iter()
+                        .map(|(x, y)| ((x - fx).powi(2) + (y - fy).powi(2)).sqrt())
+                        .fold(1e-6, f64::max);
                     peniko::Gradient::new_radial(Point::new(fx, fy), r as f32).with_stops(stops.as_slice())
                 }
             };

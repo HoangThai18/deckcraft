@@ -217,7 +217,10 @@ fn change(s: &mut Session, p: &Value) -> Result<Value> {
     })
 }
 
-fn gradient_param(v: &Value) -> Option<Gradient> {
+/// `{stops: [[pos 0–1, color], …], kind?: linear|radial|rectangular|path, angle?: deg (linear),
+/// focus?: [l, t, r, b] fractions (radial/rectangular/path: where the first stop sits),
+/// rotateWithShape?}`.
+pub(crate) fn gradient_param(v: &Value) -> Option<Gradient> {
     let stops: Vec<GradientStop> = v
         .get("stops")?
         .as_array()?
@@ -230,11 +233,27 @@ fn gradient_param(v: &Value) -> Option<Gradient> {
     if stops.len() < 2 {
         return None;
     }
+    let focus = v
+        .get("focus")
+        .and_then(Value::as_array)
+        .and_then(|a| {
+            let f = |i: usize| a.get(i).and_then(Value::as_f64).filter(|x| x.is_finite()).map(|x| x.clamp(0.0, 1.0));
+            Some([f(0)?, f(1)?, f(2)?, f(3)?])
+        })
+        .unwrap_or([0.5, 0.5, 0.5, 0.5]);
+    let mut stops = stops;
+    stops.sort_by(|a, b| a.pos.total_cmp(&b.pos));
+    let path = |p: &str| GradientShape::Path { path: p.into(), focus };
     let shape = match v.get("kind").and_then(Value::as_str) {
-        Some("radial" | "path") => GradientShape::Path { path: "circle".into(), focus: [0.5, 0.5, 0.5, 0.5] },
-        _ => GradientShape::Linear { angle: v.get("angle").and_then(Value::as_f64).unwrap_or(90.0), scaled: false },
+        Some("radial" | "circle") => path("circle"),
+        Some("rectangular" | "rect") => path("rect"),
+        Some("path" | "shape") => path("shape"),
+        _ => GradientShape::Linear {
+            angle: v.get("angle").and_then(Value::as_f64).filter(|a| a.is_finite()).unwrap_or(90.0).rem_euclid(360.0),
+            scaled: false,
+        },
     };
-    Some(Gradient { stops, shape, rotate_with_shape: true })
+    Some(Gradient { stops, shape, rotate_with_shape: v.get("rotateWithShape").and_then(Value::as_bool).unwrap_or(true) })
 }
 
 fn fill(s: &mut Session, p: &Value) -> Result<Value> {

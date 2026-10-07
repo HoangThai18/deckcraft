@@ -431,3 +431,12 @@ pub fn section(ui: &mut Ui, title: &str, open: bool) -> bool {
     p.text(pos2(rect.min.x + 18.0, rect.center().y), Align2::LEFT_CENTER, title, theme::bold(13.0), t.text);
     if resp.clicked() { !open } else { open }
 }
+
+/// A button with an optional label and a painted dropdown chevron (the UI font has no ▾).
+pub fn drop_button(ui: &mut Ui, label: &str, size: egui::Vec2, enabled: bool) -> egui::Response {
+    let t = Tokens::get(ui.ctx());
+    let r = ui.add_enabled(enabled, egui::Button::new(if label.is_empty() { String::new() } else { format!("{label}   ") }).min_size(size));
+    let col = if enabled { t.text_dim } else { t.text_faint };
+    chevron(ui.painter(), egui::pos2(r.rect.max.x - 8.0, r.rect.center().y), 3.0, col);
+    r
+}

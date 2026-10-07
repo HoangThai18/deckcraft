@@ -167,26 +167,15 @@ fn background(s: &mut Session, p: &Value) -> Result<Value> {
             color: slidecraft_model::ColorRef::scheme(slots.get(i % 4).copied().unwrap_or(slidecraft_color::SchemeSlot::Bg1)),
         })
     } else if let Some(g) = p.get("gradient") {
-        let stops: Vec<slidecraft_model::style::GradientStop> = g
-            .get("stops")
-            .and_then(Value::as_array)
-            .map(|a| {
-                a.iter()
-                    .filter_map(|s| Some(slidecraft_model::style::GradientStop { pos: s.get(0)?.as_f64()?, color: color_value(s.get(1)?)? }))
-                    .collect()
-            })
-            .unwrap_or_default();
-        if stops.len() < 2 {
-            return Err(bad("design.background", "gradient needs two or more `stops`"));
-        }
+        let mut g = super::shape::gradient_param(g).ok_or_else(|| bad("design.background", "gradient needs two or more `stops`"))?;
+        g.rotate_with_shape = false;
+        Some(Background::Fill { fill: Fill::Gradient(g) })
+    } else if let Some(pt) = p.get("pattern") {
         Some(Background::Fill {
-            fill: Fill::Gradient(slidecraft_model::style::Gradient {
-                stops,
-                shape: slidecraft_model::style::GradientShape::Linear {
-                    angle: g.get("angle").and_then(Value::as_f64).unwrap_or(90.0),
-                    scaled: false,
-                },
-                rotate_with_shape: false,
+            fill: Fill::Pattern(slidecraft_model::style::PatternFill {
+                preset: pt.get("preset").and_then(Value::as_str).unwrap_or("pct50").to_string(),
+                fg: pt.get("fg").and_then(color_value).unwrap_or(slidecraft_model::ColorRef::scheme(slidecraft_color::SchemeSlot::Accent1)),
+                bg: pt.get("bg").and_then(color_value).unwrap_or(slidecraft_model::ColorRef::scheme(slidecraft_color::SchemeSlot::Bg1)),
             }),
         })
     } else if p.get("picture").is_some() {
@@ -195,7 +184,7 @@ fn background(s: &mut Session, p: &Value) -> Result<Value> {
         let media = s.edit(|doc, _| Ok(doc.add_media(&name, ct, bytes)))?;
         Some(Background::Fill { fill: Fill::Picture(slidecraft_model::style::PictureFill { media, ..Default::default() }) })
     } else {
-        return Err(bad("design.background", "give `color`, `gradient`, `picture`, `style` or `reset`"));
+        return Err(bad("design.background", "give `color`, `gradient`, `pattern`, `picture`, `style` or `reset`"));
     };
     let all = bool_or(p, "all", false);
     let index = usize_param(p, "index");

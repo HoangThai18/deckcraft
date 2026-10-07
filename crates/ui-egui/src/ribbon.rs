@@ -505,7 +505,17 @@ pub fn cref_param(c: &slidecraft_model::ColorRef) -> Value {
             }
             Value::Object(o)
         }
-        slidecraft_model::ColorBase::Rgb { rgb } => json!(format!("#{}", rgb.hex())),
+        slidecraft_model::ColorBase::Rgb { rgb } if c.mods.is_empty() => json!(format!("#{}", rgb.hex())),
+        slidecraft_model::ColorBase::Rgb { rgb } => {
+            let mut o = serde_json::Map::new();
+            o.insert("rgb".into(), json!(format!("#{}", rgb.hex())));
+            for m in &c.mods {
+                if let Some(v) = m.value() {
+                    o.insert(m.xml_name().into(), json!(v));
+                }
+            }
+            Value::Object(o)
+        }
         _ => json!("#000000"),
     }
 }
@@ -1329,7 +1339,7 @@ fn transitions(app: &mut SlideApp, ui: &mut Ui) {
         {
             run(app, "transition.set", json!({"kind": x.0}));
         }
-        let more = ui.add(egui::Button::new("▾").min_size(vec2(14.0, 52.0)));
+        let more = widgets::drop_button(ui, "", vec2(14.0, 52.0), true);
         egui::Popup::menu(&more).width(480.0).show(|ui| {
             for cat in ["Subtle", "Exciting", "Dynamic Content"] {
                 ui.label(egui::RichText::new(cat).font(theme::bold(12.0)));
@@ -1542,7 +1552,7 @@ fn animations(app: &mut SlideApp, ui: &mut Ui) {
         {
             run(app, "animation.set", json!({"effect": a.0, "class": a.2.xml()}));
         }
-        let more = ui.add_enabled(has_sel, egui::Button::new("▾").min_size(vec2(14.0, 52.0)));
+        let more = widgets::drop_button(ui, "", vec2(14.0, 52.0), has_sel);
         egui::Popup::menu(&more).width(420.0).show(|ui| {
             for (cls, label) in
                 [(AnimClass::Entrance, "Entrance"), (AnimClass::Emphasis, "Emphasis"), (AnimClass::Exit, "Exit"), (AnimClass::Path, "Motion Paths")]
@@ -2153,7 +2163,7 @@ fn table_design(app: &mut SlideApp, ui: &mut Ui) {
         {
             run(app, "table.style", json!({"style": id}));
         }
-        let more = ui.add(egui::Button::new("▾").min_size(vec2(14.0, 40.0)));
+        let more = widgets::drop_button(ui, "", vec2(14.0, 40.0), true);
         egui::Popup::menu(&more).width(360.0).show(|ui| {
             ui.horizontal_wrapped(|ui| {
                 for (id, label) in &styles {

@@ -11,11 +11,11 @@ Each row is scored **D** (done), **P** (partial: works but lacks options, UI or 
 Live Presentations), add-ins and VBA macros.
 
 <!-- SUMMARY -->
-**Weighted breadth parity: 77%** over 187 features.
+**Weighted breadth parity: 78%** over 187 features.
 
 | Priority | Features | Done | Partial | Missing | Parity |
 |---|---|---|---|---|---|
-| P0 | 72 | 59 | 12 | 1 | 90% |
+| P0 | 72 | 61 | 10 | 1 | 92% |
 | P1 | 65 | 35 | 23 | 7 | 72% |
 | P2 | 50 | 11 | 11 | 28 | 33% |
 
@@ -25,9 +25,9 @@ Live Presentations), add-ins and VBA macros.
 | Files | 71% |
 | Slides | 95% |
 | Views | 90% |
-| Masters & themes | 80% |
+| Masters & themes | 85% |
 | Shapes | 86% |
-| Format | 75% |
+| Format | 81% |
 | Arrange | 100% |
 | Text | 83% |
 | Tables | 89% |
@@ -44,7 +44,7 @@ Live Presentations), add-ins and VBA macros.
 | Automation (✱) | 100% |
 | Platforms (✱) | 25% |
 
-Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Shape Format, Picture Format, Table Design/Layout, Chart Design), Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending), Format background (solid, gradient, picture, pattern), Gradient fill (linear, radial, rectangular, path), Format Shape pane, Edit chart data, Crop (and crop to shape, aspect ratio), Insert audio (any common format), Audio/video playback in the show, Animation pane (reorder, timing), Presenter view (notes, next slide, timer), macOS, Windows, Linux builds.
+Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Shape Format, Picture Format, Table Design/Layout, Chart Design), Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending), Format Shape pane, Edit chart data, Crop (and crop to shape, aspect ratio), Insert audio (any common format), Audio/video playback in the show, Animation pane (reorder, timing), Presenter view (notes, next slide, timer), macOS, Windows, Linux builds.
 
 ## Rows
 
@@ -104,7 +104,7 @@ Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Sh
 | Masters & themes | Colour schemes (built-in and custom) | P0 | D |
 | Masters & themes | Font schemes (built-in and custom) | P0 | D |
 | Masters & themes | Effect schemes / background styles | P2 | P |
-| Masters & themes | Format background (solid, gradient, picture, pattern) | P0 | P |
+| Masters & themes | Format background (solid, gradient, picture, pattern) | P0 | D |
 | Masters & themes | Hide background graphics | P1 | D |
 | Masters & themes | Slide size (16:9, 4:3, presets, custom) | P0 | D |
 | Masters & themes | Header & footer (date, slide number, footer) | P1 | D |
@@ -125,7 +125,7 @@ Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Sh
 | Shapes | Shape quick styles | P1 | D |
 | Shapes | Set as default shape | P2 | D |
 | Format | Solid fill and transparency | P0 | D |
-| Format | Gradient fill (linear, radial, rectangular, path) | P0 | P |
+| Format | Gradient fill (linear, radial, rectangular, path) | P0 | D |
 | Format | Picture and texture fill | P1 | P |
 | Format | Pattern fill | P2 | P |
 | Format | Line colour, width, dash, compound, cap, join | P0 | D |
