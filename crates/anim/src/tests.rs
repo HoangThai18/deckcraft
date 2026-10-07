@@ -289,6 +289,24 @@ fn text_build_by_paragraph() {
 }
 
 #[test]
+fn by_paragraph_groups_sub_bullets_with_their_parent() {
+    let mut s = slide_with(vec![]);
+    let mut body = TextBody::from_text("one\nsub a\nsub b\ntwo");
+    body.paragraphs[1].level = 1;
+    body.paragraphs[2].level = 1;
+    s.shapes[0].text = Some(body);
+    let mut a = anim(1, AnimClass::Entrance, "fade", AnimStart::OnClick);
+    a.text_build = TextBuild::ByParagraph;
+    s.animations = vec![a];
+    let tl = Timeline::new(&s, W, H);
+    assert_eq!(tl.steps(), 2);
+    assert_eq!(tl.paragraph_targets(ShapeId(1)), vec![0, 1, 2, 3]);
+    assert!(tl.state(ShapeId(1), Some(2), 1, 0.0).visible);
+    assert!(!tl.state(ShapeId(1), Some(3), 1, 0.0).visible);
+    assert!(!tl.state(ShapeId(1), Some(1), 0, 0.0).visible);
+}
+
+#[test]
 fn hostile_times_and_durations() {
     let mut a = anim(1, AnimClass::Entrance, "fly", AnimStart::OnClick);
     a.duration_ms = u32::MAX;

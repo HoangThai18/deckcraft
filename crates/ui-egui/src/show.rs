@@ -5,7 +5,7 @@ use egui::{Align2, Color32, CornerRadius, Mesh, Pos2, Rect, Sense, Stroke, Textu
 use serde_json::json;
 use slidecraft_anim::{Layer, ShowAction, ShowState, Source, Timeline};
 use slidecraft_model::{Presentation, ShapeId};
-use slidecraft_render::{RenderOpts, ShapeState};
+use slidecraft_render::{ParaState, RenderOpts, ShapeState};
 
 use crate::SlideApp;
 use crate::theme;
@@ -162,6 +162,14 @@ fn state_for(tl: &Timeline, id: ShapeId, step: usize, t: f64) -> ShapeState {
         rotate: a.rotate,
         clip: a.clip,
         tint: a.tint,
+        paras: tl
+            .paragraph_targets(id)
+            .into_iter()
+            .map(|p| {
+                let a = tl.state(id, Some(p), step, t);
+                (p, ParaState { visible: a.visible, opacity: a.opacity, offset: slidecraft_geom::Vec2::new(a.offset_x, a.offset_y) })
+            })
+            .collect(),
     }
 }
 

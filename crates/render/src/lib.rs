@@ -100,11 +100,28 @@ pub struct ShapeState {
     pub clip: Option<[f64; 4]>,
     /// Colour override for emphasis effects (fill).
     pub tint: Option<Rgba>,
+    /// Per-paragraph states of by-paragraph text builds (paragraph index, state).
+    pub paras: Vec<(usize, ParaState)>,
 }
 
 impl Default for ShapeState {
     fn default() -> Self {
-        ShapeState { visible: true, opacity: 1.0, offset: Vec2::ZERO, scale: (1.0, 1.0), rotate: 0.0, clip: None, tint: None }
+        ShapeState { visible: true, opacity: 1.0, offset: Vec2::ZERO, scale: (1.0, 1.0), rotate: 0.0, clip: None, tint: None, paras: vec![] }
+    }
+}
+
+/// Animation state of one paragraph, relative to its shape.
+#[derive(Clone, Copy, Debug)]
+pub struct ParaState {
+    pub visible: bool,
+    pub opacity: f64,
+    /// Translation in shape-local points.
+    pub offset: Vec2,
+}
+
+impl Default for ParaState {
+    fn default() -> Self {
+        ParaState { visible: true, opacity: 1.0, offset: Vec2::ZERO }
     }
 }
 
@@ -621,7 +638,8 @@ impl Renderer {
         {
             let tr = geo.text_rect;
             if !body.is_empty() {
-                draw_text(ctx, rctx, s, body, tr, m, &f.fields, None);
+                let l = slidecraft_text::layout(rctx, s, body, &Opts { rect: tr, fields: &f.fields, prompt_color: None, no_shrink: false });
+                draw_layout_with(ctx, &l, tr, m, &st.paras);
             } else if f.opts.edit && s.ph.is_some() {
                 let kind = s.ph_type().unwrap_or(PhType::Body);
                 let prompt_body = prompt_body(rctx, s, kind);
@@ -918,23 +936,42 @@ pub fn draw_text(ctx: &mut RenderContext, rctx: &Ctx, s: &Shape, body: &TextBody
 
 /// Draw an already laid-out text block.
 pub fn draw_layout(ctx: &mut RenderContext, l: &slidecraft_text::TextLayout, tr: Rect, m: Affine) {
+    draw_layout_with(ctx, l, tr, m, &[]);
+}
+
+/// Draw a laid-out text block with per-paragraph animation states.
+pub fn draw_layout_with(ctx: &mut RenderContext, l: &slidecraft_text::TextLayout, tr: Rect, m: Affine, paras: &[(usize, ParaState)]) {
+    let para = |i: usize| paras.iter().find(|(p, _)| *p == i).map(|(_, s)| *s).unwrap_or_default();
     let m = if l.rotation != 0.0 {
         let c = tr.center().to_vec2();
         m * Affine::translate(c) * Affine::rotate(l.rotation.to_radians()) * Affine::translate(-c)
     } else {
         m
     };
-    for d in l.decos.iter().filter(|d| d.behind) {
-        ctx.set_transform(m);
-        ctx.set_paint(color(d.color, 1.0));
+    let deco = |ctx: &mut RenderContext, d: &slidecraft_text::Deco| {
+        let ps = para(d.para);
+        if !ps.visible || ps.opacity <= 0.001 {
+            return;
+        }
+        ctx.set_transform(m * Affine::translate(ps.offset));
+        ctx.set_paint(color(d.color, ps.opacity));
         ctx.fill_rect(&d.rect);
+    };
+    for d in l.decos.iter().filter(|d| d.behind) {
+        deco(ctx, d);
     }
     for run in &l.runs {
         if (run.alpha <= 0.0 || run.color.a == 0) && run.outline.is_none() {
             continue;
         }
+        let ps = para(run.para);
+        if !ps.visible || ps.opacity <= 0.001 {
+            continue;
+        }
+        let m = m * Affine::translate(ps.offset);
+        let alpha = run.alpha * ps.opacity;
         let k = run.size / run.face.upem.max(1.0);
-        ctx.set_paint(color(run.color, run.alpha));
+        ctx.set_paint(color(run.color, alpha));
         for (gid, x, y) in &run.glyphs {
             let path = glyph(&run.face, *gid);
             if path.elements().is_empty() {
@@ -943,7 +980,7 @@ pub fn draw_layout(ctx: &mut RenderContext, l: &slidecraft_text::TextLayout, tr:
             let skew = if run.fake_italic { Affine::new([1.0, 0.0, -0.2, 1.0, 0.0, 0.0]) } else { Affine::IDENTITY };
             let gm = m * Affine::translate((*x, *y)) * skew * Affine::scale(k);
             ctx.set_transform(gm);
-            if run.alpha > 0.0 && run.color.a > 0 {
+            if alpha > 0.0 && run.color.a > 0 {
                 ctx.fill_path(&path);
                 if run.fake_bold {
                     ctx.set_stroke(kurbo::Stroke::new(run.face.upem * 0.025).with_join(kurbo::Join::Round));
@@ -951,17 +988,15 @@ pub fn draw_layout(ctx: &mut RenderContext, l: &slidecraft_text::TextLayout, tr:
                 }
             }
             if let Some((oc, ow)) = run.outline {
-                ctx.set_paint(color(oc, 1.0));
+                ctx.set_paint(color(oc, ps.opacity));
                 ctx.set_stroke(kurbo::Stroke::new(ow / k.max(1e-9)).with_join(kurbo::Join::Round));
                 ctx.stroke_path(&path);
-                ctx.set_paint(color(run.color, run.alpha));
+                ctx.set_paint(color(run.color, alpha));
             }
         }
     }
     for d in l.decos.iter().filter(|d| !d.behind) {
-        ctx.set_transform(m);
-        ctx.set_paint(color(d.color, 1.0));
-        ctx.fill_rect(&d.rect);
+        deco(ctx, d);
     }
 }
 

@@ -86,6 +86,9 @@ pub struct Timeline {
     triggers: Vec<(ShapeId, Vec<StepInfo>)>,
     /// Base fill colour per shape (for colour emphasis).
     colors: Vec<(ShapeId, Rgba)>,
+    /// By-paragraph builds animate first-level paragraphs; deeper paragraphs follow their parent:
+    /// (shape, member paragraph, owner paragraph).
+    groups: Vec<(ShapeId, usize, usize)>,
 }
 
 enum Status {
@@ -175,18 +178,22 @@ impl Timeline {
                 let paras: Vec<Option<usize>> = match (a.paragraph, a.text_build) {
                     (Some(p), _) => vec![Some(p as usize)],
                     (None, TextBuild::ByParagraph) => {
-                        let v: Vec<Option<usize>> = shape
-                            .and_then(|s| s.text.as_ref())
-                            .map(|t| {
-                                t.paragraphs
-                                    .iter()
-                                    .enumerate()
-                                    .filter(|(_, p)| p.runs.iter().any(|r| !r.text.trim().is_empty()))
-                                    .map(|(i, _)| Some(i))
-                                    .take(MAX_PARAGRAPHS)
-                                    .collect()
-                            })
-                            .unwrap_or_default();
+                        let mut v: Vec<Option<usize>> = vec![];
+                        if let Some(t) = shape.and_then(|s| s.text.as_ref()) {
+                            let filled = |p: &slidecraft_model::text::Paragraph| p.runs.iter().any(|r| !r.text.trim().is_empty());
+                            let top = t.paragraphs.iter().filter(|p| filled(p)).map(|p| p.level).min().unwrap_or(0);
+                            let mut owner: Option<usize> = None;
+                            for (i, p) in t.paragraphs.iter().enumerate() {
+                                if p.level <= top && filled(p) && v.len() < MAX_PARAGRAPHS {
+                                    owner = Some(i);
+                                    v.push(Some(i));
+                                } else if let Some(o) = owner
+                                    && !tl.groups.contains(&(a.shape, i, o))
+                                {
+                                    tl.groups.push((a.shape, i, o));
+                                }
+                            }
+                        }
                         if v.is_empty() { vec![None] } else { v }
                     }
                     _ => vec![None],
@@ -345,6 +352,7 @@ impl Timeline {
     /// Paragraph indices of `shape` animated separately (by-paragraph builds).
     pub fn paragraph_targets(&self, shape: ShapeId) -> Vec<usize> {
         let mut v: Vec<usize> = self.effects.iter().filter(|e| e.timing.shape == shape).filter_map(|e| e.timing.paragraph).collect();
+        v.extend(self.groups.iter().filter(|g| g.0 == shape && v.contains(&g.2)).map(|g| g.1).collect::<Vec<_>>());
         v.sort_unstable();
         v.dedup();
         v
@@ -371,6 +379,7 @@ impl Timeline {
 
     /// [`Timeline::state`] with the playheads of triggered sequences.
     pub fn state_with(&self, shape: ShapeId, para: Option<usize>, step: usize, t: f64, triggers: &[TriggerPlay]) -> AnimState {
+        let para = para.map(|p| self.groups.iter().find(|g| g.0 == shape && g.1 == p).map(|g| g.2).unwrap_or(p));
         let mine = self.effects.iter().filter(|e| e.timing.shape == shape && e.timing.paragraph == para);
         let base_color = self.colors.iter().find(|(s, _)| *s == shape).map(|(_, c)| *c).unwrap_or(Rgba::rgb(0x15, 0x60, 0x82));
         let mut st = AnimState::default();

@@ -53,6 +53,8 @@ pub struct Deco {
     pub color: Rgba,
     /// Highlights draw behind text.
     pub behind: bool,
+    /// Paragraph the decoration belongs to (by-paragraph animation).
+    pub para: usize,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -900,20 +902,20 @@ fn layout_scaled(ctx: &Ctx, shape: &Shape, body: &TextBody, bp: &BodyProps, opts
             let adv = line.caret_x.get(ci - line.start + 1).copied().unwrap_or(x) - line.caret_x.get(ci - line.start).copied().unwrap_or(x);
             let cx = line.caret_x.get(ci - line.start).copied().unwrap_or(x);
             if let Some(hl) = st.highlight {
-                out.decos.push(Deco { rect: Rect::new(cx, line.top, cx + adv, line.bottom), color: hl, behind: true });
+                out.decos.push(Deco { rect: Rect::new(cx, line.top, cx + adv, line.bottom), color: hl, behind: true, para: line.para });
             }
             if !cell.ch.is_whitespace() || st.underline.is_some() {
                 if let Some(uc) = st.underline {
                     let t = (st.size * 0.06).max(0.5);
                     let uy = line.baseline + st.size * 0.12;
-                    out.decos.push(Deco { rect: Rect::new(cx, uy, cx + adv, uy + t), color: uc, behind: false });
+                    out.decos.push(Deco { rect: Rect::new(cx, uy, cx + adv, uy + t), color: uc, behind: false, para: line.para });
                 }
                 if let Some(sk) = st.strike {
                     let t = (st.size * 0.05).max(0.5);
                     let sy = line.baseline - st.size * 0.3;
-                    out.decos.push(Deco { rect: Rect::new(cx, sy, cx + adv, sy + t), color: st.color, behind: false });
+                    out.decos.push(Deco { rect: Rect::new(cx, sy, cx + adv, sy + t), color: st.color, behind: false, para: line.para });
                     if sk == Strike::Double {
-                        out.decos.push(Deco { rect: Rect::new(cx, sy - t * 2.0, cx + adv, sy - t), color: st.color, behind: false });
+                        out.decos.push(Deco { rect: Rect::new(cx, sy - t * 2.0, cx + adv, sy - t), color: st.color, behind: false, para: line.para });
                     }
                 }
             }
