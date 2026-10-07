@@ -17,6 +17,7 @@ slidecraft-text = { workspace = true }
 slidecraft-render = { workspace = true }
 slidecraft-anim = { workspace = true }
 slidecraft-engine = { workspace = true }
+slidecraft-media = { workspace = true }
 egui = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

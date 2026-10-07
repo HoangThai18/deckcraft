@@ -26,6 +26,11 @@ format plus PPTX), scriptable by agents (CLI, JSON control channel, MCP), and av
 - Views: Normal (thumbnails with sections, slide, notes), Outline, Slide Sorter, Notes Page,
   Slide Master; zoom; grayscale.
 - Review: comments, accessibility checker, spelling.
+- Audio and video: MP3, AAC/M4A, ALAC, WAV, AIFF, CAF, FLAC, Ogg Vorbis and Opus audio; H.264,
+  HEVC, VP9 and AV1 video in MP4/MOV/WebM/MKV (pure-Rust decoders); poster frames, trim, fades,
+  volume, loop, rewind, play across slides, hide during show, full screen; an in-place control bar
+  in the editor and `media.play/pause/stop/seek/info/posterFrame` for agents. WMA/WMV are
+  recognised and embedded but not yet playable.
 - PDF export: slides, notes pages and handouts (1–9 per page) with a selectable real-text layer, hyperlinks and slide bookmarks (`file.export {format: "pdf", layout}`, File › Export…).
 - UI: PowerPoint-style ribbon with contextual tabs, ~240 original icons, status bar, panes, command
   palette, light/dark.
@@ -39,7 +44,7 @@ format plus PPTX), scriptable by agents (CLI, JSON control channel, MCP), and av
 
 **In progress:** PPTX import/export · first signed release run.
 
-**Next (in order):** vector PDF artwork · audio/video playback · Format Shape pane depth · connectors with
+**Next (in order):** vector PDF artwork · WMA/WMV decoding · Format Shape pane depth · connectors with
 glue, freeform and edit points · merge shapes · Animation Pane polish · native macOS menu bar ·
 print · Notes/Handout masters · equations · SVG pictures.
 

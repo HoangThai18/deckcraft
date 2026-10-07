@@ -35,6 +35,8 @@ pub struct Show {
     timings: Vec<(usize, f64)>,
     last_move: f64,
     pub ended: bool,
+    /// The slide whose media was last started (auto-play runs once per visit).
+    media_slide: Option<usize>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -43,6 +45,8 @@ struct Key {
     step: usize,
     size: (u32, u32),
     doc: usize,
+    /// Media hidden while not playing.
+    hidden: Vec<ShapeId>,
 }
 
 struct Transition {
@@ -78,6 +82,7 @@ impl Show {
             timings: vec![],
             last_move: 0.0,
             ended: false,
+            media_slide: None,
         }
     }
 
@@ -268,7 +273,10 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
             _ => {}
         }
     }
-    if clicked && !show.pen && !show.reading_bar_hit(&ctx) {
+    let media_click = if clicked && !show.pen && !show.ended && show.blank.is_none() { media_hit(&ctx, ui, &show, &doc) } else { None };
+    if let Some((id, clip)) = media_click {
+        app.media.toggle(&doc, id, &clip, crate::media::Owner::Show);
+    } else if clicked && !show.pen && !show.reading_bar_hit(&ctx) {
         if show.ended {
             keep = false;
         } else if show.blank.is_some() {
@@ -307,6 +315,7 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
             keep = false;
         }
     }
+    show_media(app, &mut show, &doc);
     // Draw.
     let full = ui.max_rect();
     let painter = ui.painter_at(full);
@@ -328,12 +337,27 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
         let step = show.state.step;
         let animating = show.state.playing;
         let t = if animating { now - show.step_start } else { 0.0 };
-        let key = Key { slide: idx, step, size, doc: std::sync::Arc::as_ptr(&doc) as usize };
+        let media = crate::media::slide_media(&doc, idx);
+        let hidden: Vec<ShapeId> = media
+            .iter()
+            .filter(|(id, _, clip)| {
+                clip.hide_while_not_playing && !app.media.status(*id).is_some_and(|s| s.state != slidecraft_media::PlayState::Ended)
+            })
+            .map(|m| m.0)
+            .collect();
+        let key = Key { slide: idx, step, size, doc: std::sync::Arc::as_ptr(&doc) as usize, hidden: hidden.clone() };
         let tex = if !animating && show.tex.as_ref().is_some_and(|(k, _)| *k == key) {
             show.tex.as_ref().map(|(_, t)| t.clone())
         } else {
             let tl = show.timeline(&doc).clone();
-            let f = move |id: ShapeId| state_for(&tl, id, step, t);
+            let hide = hidden.clone();
+            let f = move |id: ShapeId| {
+                let mut st = state_for(&tl, id, step, t);
+                if hide.contains(&id) {
+                    st.visible = false;
+                }
+                st
+            };
             let threads =
                 if cfg!(target_arch = "wasm32") { 0 } else { std::thread::available_parallelism().map(|n| n.get().min(8) as u16).unwrap_or(0) };
             let img = slidecraft_render::render_slide(
@@ -382,6 +406,19 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
             show.trans = None;
             if let Some(tex) = &tex {
                 painter.image(tex.id(), srect, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+            }
+            // Playing video: the current frame in its box, or full screen.
+            let k = srect.width() / doc.slide_size.width.max(1.0) as f32;
+            for (id, x, clip) in &media {
+                if !clip.video || hidden.contains(id) {
+                    continue;
+                }
+                let r = if clip.full_screen && app.media.is_playing(*id) {
+                    full
+                } else {
+                    Rect::from_min_size(pos2(srect.min.x + x.x as f32 * k, srect.min.y + x.y as f32 * k), vec2(x.w as f32 * k, x.h as f32 * k))
+                };
+                crate::media::paint_frame(&painter, &app.media, *id, r);
             }
         }
         if animating {
@@ -489,6 +526,7 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
     if keep {
         app.show = Some(show);
     } else {
+        app.media.stop_owned(crate::media::Owner::Show);
         if !show.reading {
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
         }
@@ -505,6 +543,45 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
         let last = show.state.slide;
         let _ = app.run("slide.go", json!({"index": last}));
     }
+}
+
+/// Start the media of a newly shown slide: media from the previous slide stops unless it plays
+/// across slides; media set to start automatically plays. Everything stops at the end.
+fn show_media(app: &mut SlideApp, show: &mut Show, doc: &Presentation) {
+    let cur = if show.ended { None } else { Some(show.state.slide) };
+    if show.media_slide == cur {
+        return;
+    }
+    show.media_slide = cur;
+    let keep: Vec<ShapeId> = match cur {
+        Some(_) => app.media.ids().into_iter().filter(|id| crate::media::find_clip(doc, *id).is_some_and(|c| c.play_across_slides)).collect(),
+        None => vec![],
+    };
+    for id in app.media.ids() {
+        if !keep.contains(&id) {
+            app.media.stop(id);
+        }
+    }
+    if let Some(i) = cur {
+        for (id, _, clip) in crate::media::slide_media(doc, i) {
+            if clip.autoplay && !keep.contains(&id) {
+                app.media.play(doc, id, &clip, None, crate::media::Owner::Show);
+            }
+        }
+    }
+}
+
+/// The media shape under the pointer on the shown slide.
+fn media_hit(ctx: &egui::Context, ui: &Ui, show: &Show, doc: &Presentation) -> Option<(ShapeId, slidecraft_model::MediaClip)> {
+    let p = ctx.input(|i| i.pointer.interact_pos())?;
+    let full = ui.max_rect();
+    let avail = if show.reading { Rect::from_min_max(full.min, pos2(full.max.x, full.max.y - 34.0)) } else { full };
+    let srect = fit(avail, doc);
+    let k = srect.width() / doc.slide_size.width.max(1.0) as f32;
+    crate::media::slide_media(doc, show.state.slide).into_iter().rev().find_map(|(id, x, clip)| {
+        let r = Rect::from_min_size(pos2(srect.min.x + x.x as f32 * k, srect.min.y + x.y as f32 * k), vec2(x.w as f32 * k, x.h as f32 * k));
+        r.contains(p).then_some((id, clip))
+    })
 }
 
 impl Show {

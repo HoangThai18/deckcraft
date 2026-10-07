@@ -24,6 +24,7 @@ use slidecraft_model::{Presentation, Shape, ShapeId, Slide, SlideId};
 
 pub use cmd::{CommandInfo, CommandSpec, command_specs, find_command};
 pub use slidecraft_geom as geom;
+pub use slidecraft_media as media;
 pub use slidecraft_model as model;
 pub use slidecraft_render as render;
 pub use tools::{Mods, PointerEvent, PointerKind, ToolKind};
@@ -238,11 +239,41 @@ impl Default for Prefs {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum UiRequest {
-    Dialog { id: String, params: Value },
-    Pane { id: String },
-    StartShow { from: usize },
-    Message { text: String },
-    PickFile { purpose: String },
+    Dialog {
+        id: String,
+        params: Value,
+    },
+    Pane {
+        id: String,
+    },
+    StartShow {
+        from: usize,
+    },
+    Message {
+        text: String,
+    },
+    PickFile {
+        purpose: String,
+    },
+    /// Media playback for the UI host (`media.play` / `pause` / `stop` / `seek`): `action` is
+    /// `play`, `pause`, `toggle`, `stop` or `seek`; `ms` the media time to start from / seek to.
+    Media {
+        action: String,
+        shape: ShapeId,
+        ms: Option<u64>,
+    },
+}
+
+/// Playback state of a media shape as the UI host reports it (see [`Session::media_status`]).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaStatus {
+    /// `loading`, `playing`, `paused` or `ended`.
+    pub state: String,
+    pub position_ms: u64,
+    pub duration_ms: u64,
+    /// Why the media is silent / blank, when it can't be decoded.
+    pub error: Option<String>,
 }
 
 /// Clipboard contents copied within the app.
@@ -276,6 +307,8 @@ pub struct Session {
     depth: u32,
     /// Crash-recovery folder (the app sets it; saving or closing a presentation removes its entry).
     pub recovery_dir: Option<std::path::PathBuf>,
+    /// Media playback state, written by the UI host every frame (empty without a host).
+    pub media_status: std::collections::HashMap<ShapeId, MediaStatus>,
 }
 
 impl Default for Session {
@@ -300,6 +333,7 @@ impl Session {
             painter: None,
             depth: 0,
             recovery_dir: None,
+            media_status: Default::default(),
         }
     }
     /// A session with one new presentation open.

@@ -2292,8 +2292,9 @@ fn playback(app: &mut SlideApp, ui: &mut Ui) {
         .active()
         .and_then(|d| d.selected_shapes().into_iter().find_map(|s| if let ShapeKind::Media(m) = &s.kind { Some(m.clone()) } else { None }));
     group(ui, |ui| {
-        if big_button(ui, Icon::Play, "Play", m.is_some()).clicked() {
-            app.set_status("Media plays in the slide show (Present).");
+        let playing = app.session.active().and_then(|d| d.selection.shapes.first().copied()).is_some_and(|id| app.media.is_playing(id));
+        if big_button(ui, if playing { Icon::Pause } else { Icon::Play }, if playing { "Pause" } else { "Play" }, m.is_some()).clicked() {
+            run(app, "media.toggle", json!({}));
         }
         big(app, ui, Icon::TrimMedia, "Trim", "app.dialog", json!({"id": "trim"}));
     });

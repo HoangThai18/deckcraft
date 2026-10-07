@@ -243,20 +243,33 @@ pub fn content_type(name: &str, bytes: &[u8]) -> &'static str {
         "audio/flac"
     } else if bytes.starts_with(b"OggS") {
         if l.ends_with(".ogv") { "video/ogg" } else { "audio/ogg" }
+    } else if bytes.len() > 1 && bytes[0] == 0xFF && bytes[1] & 0xF6 == 0xF0 {
+        // ADTS (layer bits 00): AAC.
+        "audio/aac"
     } else if bytes.starts_with(b"ID3") || (bytes.len() > 1 && bytes[0] == 0xFF && (bytes[1] & 0xE0) == 0xE0 && !l.ends_with(".aac")) {
         "audio/mpeg"
     } else if bytes.starts_with(b"FORM") {
         "audio/aiff"
     } else if bytes.get(4..8) == Some(b"ftyp") {
-        if l.ends_with(".m4a") || bytes.get(8..11) == Some(b"M4A") {
+        if l.ends_with(".m4a") || l.ends_with(".m4b") || bytes.get(8..11) == Some(b"M4A") {
             "audio/mp4"
-        } else if l.ends_with(".mov") {
+        } else if l.ends_with(".mov") || bytes.get(8..12) == Some(b"qt  ") {
             "video/quicktime"
         } else {
             "video/mp4"
         }
     } else if bytes.starts_with(&[0x1A, 0x45, 0xDF, 0xA3]) {
-        "video/webm"
+        if l.ends_with(".mka") || l.ends_with(".weba") {
+            "audio/webm"
+        } else if l.ends_with(".mkv") {
+            "video/x-matroska"
+        } else {
+            "video/webm"
+        }
+    } else if bytes.starts_with(&[0x30, 0x26, 0xB2, 0x75, 0x8E, 0x66, 0xCF, 0x11]) {
+        if l.ends_with(".wmv") || l.ends_with(".asf") { "video/x-ms-wmv" } else { "audio/x-ms-wma" }
+    } else if bytes.starts_with(b"caff") {
+        "audio/x-caf"
     } else if l.ends_with(".svg") || bytes.windows(4).take(512).any(|w| w == b"<svg") {
         "image/svg+xml"
     } else if l.ends_with(".aac") {
@@ -433,24 +446,65 @@ fn media(s: &mut Session, p: &Value, video: bool) -> Result<Value> {
     let cmd = if video { "insert.video" } else { "insert.audio" };
     let (name, bytes) = media_bytes(p, cmd)?;
     let ct = content_type(&name, &bytes);
-    if video && !ct.starts_with("video/") {
-        return Err(bad(cmd, format!("{name} is not a supported video ({ct})")));
+    let bytes = std::sync::Arc::new(bytes);
+    let info = slidecraft_media::probe(&bytes);
+    let has_video = info.as_ref().is_ok_and(|i| i.video.is_some());
+    let has_audio = info.as_ref().is_ok_and(|i| i.audio.is_some());
+    match &info {
+        Ok(_) if video && !has_video => return Err(bad(cmd, format!("{name} has no video"))),
+        Ok(_) if !video && !has_audio && !has_video => return Err(bad(cmd, format!("{name} has no audio"))),
+        // Not something we can read: embed it anyway when the type says it's media (it still
+        // round-trips through PPTX), otherwise refuse.
+        Err(_) if video && !ct.starts_with("video/") => return Err(bad(cmd, format!("{name} is not a supported video ({ct})"))),
+        Err(_) if !video && !ct.starts_with("audio/") => return Err(bad(cmd, format!("{name} is not a supported audio file ({ct})"))),
+        _ => {}
     }
-    if !video && !ct.starts_with("audio/") {
-        return Err(bad(cmd, format!("{name} is not a supported audio file ({ct})")));
-    }
+    let (duration_ms, width, height, playable) = match &info {
+        Ok(i) => {
+            let (w, h) = i.video.as_ref().map(|v| (v.width, v.height)).unwrap_or((0, 0));
+            (i.duration_ms.min(u32::MAX as u64) as u32, w, h, i.playable())
+        }
+        Err(_) => (0, 0, 0, false),
+    };
+    let warning = (!playable).then(|| match &info {
+        Ok(i) => {
+            let codecs: Vec<&str> = i.audio.iter().map(|a| a.codec.as_str()).chain(i.video.iter().map(|v| v.codec.as_str())).collect();
+            format!("{name} was inserted, but it can't be played ({} isn't supported yet)", codecs.join(" / "))
+        }
+        Err(e) => format!("{name} was inserted, but it can't be played ({e})"),
+    });
+    let decodable_video = info.as_ref().is_ok_and(|i| i.video.as_ref().is_some_and(|v| v.decodable));
+    let poster_png = if video && decodable_video { super::media::poster_png(&bytes, 0) } else { None };
     let size = s.doc()?.doc.slide_size;
     let rect = rect_param(p, "rect").unwrap_or_else(|| {
         if video {
-            Xfrm::new(size.width * 0.2, size.height * 0.2, size.width * 0.6, size.width * 0.6 * 9.0 / 16.0)
+            // Natural size (96 dpi), fitted inside 90 % of the slide and centred.
+            let (w, h) =
+                if width > 0 && height > 0 { (width as f64 * 0.75, height as f64 * 0.75) } else { (size.width * 0.6, size.width * 0.6 * 9.0 / 16.0) };
+            let k = (size.width * 0.9 / w).min(size.height * 0.9 / h).min(1.0);
+            let (w, h) = (w * k, h * k);
+            Xfrm::new((size.width - w) / 2.0, (size.height - h) / 2.0, w, h)
         } else {
             Xfrm::new((size.width - 48.0) / 2.0, (size.height - 48.0) / 2.0, 48.0, 48.0)
         }
     });
-    let media = s.edit(|doc, _| Ok(doc.add_media(&name, ct, bytes)))?;
-    let clip = MediaClip { media, video, volume: 1.0, ..Default::default() };
+    let data = std::sync::Arc::try_unwrap(bytes).unwrap_or_else(|a| (*a).clone());
+    let (media, poster) = s.edit(|doc, _| {
+        let media = doc.add_media(&name, ct, data);
+        let poster = poster_png.map(|png| doc.add_media(&format!("{name}-poster.png"), "image/png", png));
+        Ok((media, poster))
+    })?;
+    let clip = MediaClip { media, video, poster, volume: 1.0, duration_ms, width, height, ..Default::default() };
     let id = add_shape(s, Shape { xfrm: Some(rect), kind: ShapeKind::Media(clip), descr: name, ..Default::default() }, true)?;
-    Ok(json!({"id": id, "contentType": ct}))
+    if let Some(w) = &warning {
+        s.ui_requests.push(crate::UiRequest::Message { text: w.clone() });
+    }
+    let mut r =
+        json!({"id": id, "contentType": ct, "durationMs": duration_ms, "width": width, "height": height, "playable": playable, "warning": warning});
+    if let Ok(i) = &info {
+        r["probe"] = super::media::probe_json(i);
+    }
+    Ok(r)
 }
 
 fn audio(s: &mut Session, p: &Value) -> Result<Value> {

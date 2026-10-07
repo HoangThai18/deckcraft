@@ -19,3 +19,11 @@ list (author, source, license) is in ATTRIBUTION.md.
   ATTRIBUTION.md (Inter, Carlito, Caladea, Liberation, Montserrat, Lato, Open Sans, Roboto,
   Merriweather, Playfair Display, Poppins, Nunito Sans, BIZ UD, Shippori Mincho, Noto Sans
   Arabic) under the SIL Open Font License 1.1; their licence texts ship with release packages.
+
+Code dependencies
+
+- symphonia (audio decoding for MP3, AAC, ALAC, FLAC, Vorbis, WAV, AIFF, CAF) is used unmodified
+  under the Mozilla Public License 2.0; its source is available at
+  https://github.com/pdeljanov/Symphonia.
+- The H.264, HEVC, VP9, AV1, Opus, MP4, Matroska and Ogg crates under crates/ are ported from
+  FilmCraft (same owner, MIT OR Apache-2.0).

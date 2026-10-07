@@ -11,6 +11,7 @@ pub mod control;
 pub mod dialogs;
 pub mod fillui;
 pub mod icons;
+pub mod media;
 pub mod menus;
 pub mod panes;
 pub mod ribbon;
@@ -54,6 +55,8 @@ pub struct Services {
     pub inbox: Option<Inbox>,
     /// Image on the system clipboard (PNG bytes), when the host can read one.
     pub clipboard_image: Option<Box<dyn FnMut() -> Option<Vec<u8>>>>,
+    /// Audio output for media playback (cpal on desktop); without one media plays silently.
+    pub audio_out: Option<Box<dyn slidecraft_media::AudioOut>>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -173,6 +176,8 @@ pub struct SlideApp {
     pub control_rx: Option<Receiver<ControlRequest>>,
     pub dialog: Option<dialogs::Dialog>,
     pub show: Option<show::Show>,
+    /// Audio/video playback (editor control bar, slide show, `media.*` commands).
+    pub media: media::MediaHost,
     pub status: Option<(String, f64)>,
     pub perf: Perf,
     /// Synthetic input events (control channel `ui.click` etc.), injected one per frame.
@@ -202,7 +207,8 @@ pub struct SlideApp {
 }
 
 impl SlideApp {
-    pub fn new(session: Session, services: Services) -> Self {
+    pub fn new(session: Session, mut services: Services) -> Self {
+        let audio_out = services.audio_out.take();
         SlideApp {
             session,
             services,
@@ -211,6 +217,7 @@ impl SlideApp {
             control_rx: None,
             dialog: None,
             show: None,
+            media: media::MediaHost::new(audio_out),
             status: None,
             perf: Perf { frame_ms: 0.0, render_ms: 0.0, fps: 0.0 },
             synthetic: vec![],
@@ -313,7 +320,10 @@ impl SlideApp {
                 self.start_show(from, false);
             }
             "show.presenter" => self.ui.presenter_view = self.flag(p, self.ui.presenter_view),
-            "show.end" => self.show = None,
+            "show.end" => {
+                self.show = None;
+                self.media.stop_owned(media::Owner::Show);
+            }
             "app.about" => self.dialog = Some(dialogs::Dialog::new("about")),
             "app.palette" => self.palette = Some((String::new(), 0)),
             "app.preferences" => self.dialog = Some(dialogs::Dialog::new("preferences")),
@@ -337,6 +347,7 @@ impl SlideApp {
     }
 
     pub fn start_show(&mut self, from: usize, reading: bool) {
+        self.media.stop_owned(media::Owner::Editor);
         if let Some(d) = self.session.active() {
             self.show = Some(show::Show::new(&d.doc, from, reading, self.ui.presenter_view && !reading));
         }
@@ -445,6 +456,12 @@ impl SlideApp {
                 UiRequest::PickFile { purpose } => {
                     if purpose == "saveAs" {
                         self.save_as_dialog("slidecraft");
+                    }
+                }
+                UiRequest::Media { action, shape, ms } => {
+                    let owner = if self.show.is_some() { media::Owner::Show } else { media::Owner::Editor };
+                    if let Some(doc) = self.session.active().map(|d| d.doc.clone()) {
+                        self.media.request(&doc, &action, shape, ms, owner);
                     }
                 }
             }
@@ -632,6 +649,7 @@ impl SlideApp {
         }
         let t0 = now_ms();
         let t = theme::Tokens::get(&ctx);
+        self.tick_media(&ctx);
         if self.show.is_some() {
             show::ui(self, ui);
             self.perf.frame_ms = now_ms() - t0;
@@ -676,6 +694,29 @@ impl SlideApp {
         }
         self.drain_requests();
         self.perf.frame_ms = now_ms() - t0;
+    }
+
+    /// Media clocks and video textures; the editor's media stops when its slide is left.
+    fn tick_media(&mut self, ctx: &egui::Context) {
+        if !self.media.any_active() {
+            self.session.media_status.clear();
+            return;
+        }
+        if self.show.is_none()
+            && let Some(d) = self.session.active()
+        {
+            let here: Vec<slidecraft_model::ShapeId> = if d.selection.target == slidecraft_engine::Target::Slides {
+                media::slide_media(&d.doc, d.selection.slide).into_iter().map(|m| m.0).collect()
+            } else {
+                vec![]
+            };
+            let gone: Vec<_> =
+                self.media.ids().into_iter().filter(|id| !here.contains(id) && self.media.owner(*id) == Some(media::Owner::Editor)).collect();
+            for id in gone {
+                self.media.stop(id);
+            }
+        }
+        self.media.tick(ctx, &mut self.session);
     }
 
     pub fn open_url(&mut self, url: &str) {

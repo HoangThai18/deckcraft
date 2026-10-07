@@ -9,6 +9,7 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 #![forbid(unsafe_code)]
 
+mod audio;
 mod control_server;
 
 use slidecraft_engine::Session;
@@ -84,8 +85,11 @@ fn services() -> Services {
             let d = rfd::FileDialog::new();
             let d = match purpose {
                 "picture" => d.add_filter("Pictures", &["png", "jpg", "jpeg", "gif", "webp", "bmp", "tif", "tiff"]),
-                "audio" => d.add_filter("Audio", &["wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "aif", "aiff"]),
-                "video" => d.add_filter("Video", &["mp4", "m4v", "mov", "webm"]),
+                "audio" => d.add_filter(
+                    "Audio",
+                    &["wav", "mp3", "m4a", "m4b", "aac", "flac", "ogg", "oga", "opus", "aif", "aiff", "aifc", "caf", "wma", "weba", "mka"],
+                ),
+                "video" => d.add_filter("Video", &["mp4", "m4v", "mov", "webm", "mkv", "wmv"]),
                 _ => d
                     .add_filter("Presentations", &["slidecraft", "pptx", "potx", "ppsx"])
                     .add_filter("SlideCraft", &["slidecraft"])
@@ -105,6 +109,10 @@ fn services() -> Services {
             rgba.write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png).ok()?;
             Some(out)
         })),
+        // Media is mixed and clocked by the output device; `SLIDECRAFT_NO_AUDIO` plays silently.
+        audio_out: std::env::var_os("SLIDECRAFT_NO_AUDIO")
+            .is_none()
+            .then(|| Box::new(audio::CpalOut::default()) as Box<dyn slidecraft_media::AudioOut>),
         ..Default::default()
     }
 }

@@ -240,6 +240,11 @@ pub struct MediaClip {
     pub full_screen: bool,
     /// Bookmarks (name, ms).
     pub bookmarks: Vec<(String, u32)>,
+    /// Probed length in ms (0 = unknown).
+    pub duration_ms: u32,
+    /// Probed picture size of a video in pixels (0 = unknown).
+    pub width: u32,
+    pub height: u32,
 }
 
 /// One ink stroke (Draw tab): points in slide coordinates with pressure.

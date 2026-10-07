@@ -18,6 +18,7 @@ slidecraft-render = { workspace = true }
 slidecraft-pdf = { workspace = true }
 slidecraft-format = { workspace = true }
 slidecraft-pptx = { workspace = true }
+slidecraft-media = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 i_overlay = { workspace = true }
