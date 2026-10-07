@@ -43,6 +43,10 @@
 > last week. If you make things, you're one of us. **[Come say hi on Discord](https://discord.gg/artcraft).**
 
 <p align="center">
+  <img alt="DeckCraft editing a slide: ribbon, slide thumbnails with sections, a process diagram on the canvas, notes and status bar" src="docs/images/editor.png" width="900">
+</p>
+
+<p align="center">
   <a href="#what-works-today">What works</a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="#agents-cli-and-mcp">Agents, CLI and MCP</a> ·
@@ -53,19 +57,42 @@
 
 ## What works today
 
-DeckCraft is in early development. Today:
+DeckCraft is in early development, heading for its first alpha (see the [roadmap](ROADMAP.md)).
+Today it can:
 
-- **Presentation model** with slide masters, eleven layouts, placeholders that inherit position and
-  formatting, themes (colour, font and effect schemes), sections, notes, comments, transitions and
-  animations.
-- **150+ preset shapes** (rectangles, basic shapes, block arrows, equation shapes, flowchart, stars
-  and banners, callouts, action buttons) with adjust handles, re-derived from scratch.
-- **Text engine**: shaping with font fallback, line breaking, bullets and numbering, indents and
-  spacing, alignment, anchoring, columns, shrink-on-overflow and resize-to-fit.
-- **Renderer** (vello_cpu): gradients, pictures with crop and corrections, outlines with dashes and
-  arrowheads, shadows, glow, soft edges, reflections, tables with styles, charts.
-- **Editing engine**: 200+ commands, undo/redo, clipboard, grouping, align and distribute, smart
-  guides, Format Painter, in-place text editing — all scriptable.
+- **Make decks**: slide masters and eleven layouts with placeholders that inherit position and
+  formatting, eight original themes with colour and font schemes, sections, notes, comments,
+  headers and footers, custom slide sizes.
+- **Draw**: 150+ preset shapes with adjust handles, connectors that stay glued to shapes, freeform,
+  curve and scribble tools, merge shapes (union, combine, fragment, intersect, subtract), gradient,
+  picture and pattern fills, outlines with dashes and arrowheads, shadows, glow, soft edges and
+  reflections.
+- **Write**: in-place text editing with full font and paragraph formatting, bullets and numbering,
+  columns, autofit, vertical text, fields and hyperlinks.
+- **Add content**: pictures with crop and corrections, tables with styles, charts, SmartArt basics,
+  audio and video (MP3, AAC, FLAC, ALAC, Ogg, Opus, WAV, AIFF; H.264, HEVC, VP9, AV1).
+- **Present**: transitions (including Morph), entrance/emphasis/exit and motion-path animations,
+  by-paragraph builds, full-screen slide show, presenter view, pen, rehearse timings, media playback.
+- **Exchange files**: open and save PowerPoint `.pptx`, export PDF (slides, notes pages, handouts
+  with selectable text), PNG/JPEG and outlines. Unsaved work is kept by AutoRecover.
+- **Automate**: 200+ commands with undo, all scriptable from the CLI, a JSON control channel and an
+  MCP server for AI agents.
+
+<table>
+  <tr>
+    <td width="50%"><img alt="A selected shape with the Shape Format tab" src="docs/images/shape-format.png"><br><sub>Shape Format contextual tab and selection handles</sub></td>
+    <td width="50%"><img alt="The Format Shape pane editing a gradient fill" src="docs/images/format-pane.png"><br><sub>Format Shape pane: gradient type, direction and stops</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img alt="Slide Sorter view with transitions under each slide" src="docs/images/slide-sorter.png"><br><sub>Slide Sorter with each slide's transition</sub></td>
+    <td width="50%"><img alt="DeckCraft in dark mode showing a chart slide" src="docs/images/dark-mode.png"><br><sub>Dark mode, with a native chart</sub></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img alt="All eight slides of the Northern Lights sample deck" src="docs/images/sample-deck.png" width="900"><br>
+  <sub>The built-in sample deck, rendered by <code>deckcraft-cli render --sample --all</code></sub>
+</p>
 
 ## Getting started
 
@@ -88,12 +115,15 @@ same verbs:
 deckcraft-cli commands format.          # list commands
 deckcraft-cli run --sample --cmd 'slide.new={"layout":"titleOnly","title":"Hello"}' --save hello.deckcraft
 deckcraft-cli mcp                       # MCP server over stdio (headless)
-deckcraft-cli mcp --connect 7979        # drive the running app (deckcraft --control 7979)
+deckcraft-cli mcp --connect 7990        # drive the running app (deckcraft --control 7990)
 ```
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for milestones, parity estimates and what's next.
+DeckCraft covers about **79% of PowerPoint's features by breadth** (93% of the core ones) and is
+roughly **80% of the way to a first alpha**. See [ROADMAP.md](ROADMAP.md) for the alpha checklist,
+parity estimates and what's next, and [docs/parity.md](docs/parity.md) for the feature-by-feature
+scorecard.
 
 ## The Crafting Apps
 

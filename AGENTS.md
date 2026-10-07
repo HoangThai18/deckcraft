@@ -141,8 +141,8 @@ to `main`.
 
 ## 6. Running and looking at the app
 
-- `cargo run --release -p deckcraft -- --sample --control 7979` (sample deck + control channel).
-- Drive it: JSON lines on `127.0.0.1:7979`, e.g.
+- `cargo run --release -p deckcraft -- --sample --control 7990` (sample deck + control channel).
+- Drive it: JSON lines on `127.0.0.1:7990`, e.g.
   `{"id":1,"method":"engine.execute","params":{"command":"shape.insert","params":{"preset":"star5","rect":[100,100,200,200]}}}`
   then `{"id":2,"method":"ui.screenshot","params":{"path":"/tmp/shot.png"}}`. Methods:
   `crates/ui-egui/src/control.rs`, docs: `docs/control-protocol.md`.
@@ -150,7 +150,7 @@ to `main`.
   in `plan/powerpoint/01-observed-ui.md`.
 - Headless: `deckcraft-cli render --sample --all --scale 1 out/`,
   `deckcraft-cli run --sample --cmd 'slide.new={"title":"Hi"}' --export out.png`.
-- MCP: `deckcraft-cli mcp` (headless) or `deckcraft-cli mcp --connect 7979` (drive the app).
+- MCP: `deckcraft-cli mcp` (headless) or `deckcraft-cli mcp --connect 7990` (drive the app).
   See `docs/mcp.md`.
 - Shell gotcha on the dev machine: `mv`/`cp` are aliased interactive; use `/bin/mv -f`, `/bin/cp -f`.
 - Parallel agents: separate `CARGO_TARGET_DIR` per agent; edit only the crates you own.

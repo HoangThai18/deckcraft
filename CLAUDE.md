@@ -10,7 +10,7 @@ win over anything here.
 
 ## Habits
 - Every user-visible action is a command with tests (`crates/engine/src/cmd/*`).
-- Look at UI changes: `deckcraft --sample --control 7979` + `ui.screenshot`, or
+- Look at UI changes: `deckcraft --sample --control 7990` + `ui.screenshot`, or
   `deckcraft-cli render`.
 - Commit after each landed arc (`M<n>.<k>: what`) and push to `origin main`.
 - Keep `ROADMAP.md` and `plan/STATUS.md` current.
