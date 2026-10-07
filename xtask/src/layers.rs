@@ -42,7 +42,8 @@ pub const TABLE: &[(&str, Class)] = &[
     ("format", Class::Layer(2)),
     ("render", Class::Layer(3)),
     ("pptx", Class::Layer(3)),
-    ("engine", Class::Layer(4)),
+    ("pdf", Class::Layer(4)),
+    ("engine", Class::Layer(5)),
     ("ui-egui", Class::Layer(6)),
     ("mcp", Class::Layer(6)),
     ("testkit", Class::Testkit),
@@ -255,7 +256,7 @@ mod tests {
     #[test]
     fn upward_dependency_flagged() {
         let v = check(&[c("slidecraft-model", &[("slidecraft-engine", Normal, true)])]);
-        assert!(matches!(v[..], [Violation::Upward { from: 1, to: 4, .. }]));
+        assert!(matches!(v[..], [Violation::Upward { from: 1, to: 5, .. }]));
     }
 
     #[test]
@@ -285,7 +286,7 @@ mod tests {
     fn ui_crates_below_l6_flagged() {
         for dep in ["egui", "eframe", "winit", "egui_kittest", "rfd", "bevy_ecs", "bevy"] {
             let v = check(&[c("slidecraft-engine", &[(dep, Normal, false)])]);
-            assert!(matches!(v[..], [Violation::UiBelowL6 { layer: 4, .. }]), "{dep}");
+            assert!(matches!(v[..], [Violation::UiBelowL6 { layer: 5, .. }]), "{dep}");
         }
         assert!(check(&[c("slidecraft-engine", &[("egui_extras_not", Normal, false)])]).is_empty());
         assert!(check(&[c("slidecraft-mcp", &[("winit", Normal, false)])]).is_empty());

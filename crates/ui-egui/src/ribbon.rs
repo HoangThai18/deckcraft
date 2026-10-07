@@ -645,8 +645,7 @@ pub fn shapes_gallery(ui: &mut Ui) -> Option<&'static str> {
 
 /// Draw a preset's outline (gallery icons).
 pub fn paint_preset(p: &egui::Painter, r: Rect, name: &str, fill: Color32, stroke: Color32) {
-    let line = slidecraft_geom::preset::is_line_like(name);
-    let (w, h) = if line { (r.width() as f64, r.height() as f64) } else { (r.width() as f64, r.height() as f64) };
+    let (w, h) = (r.width() as f64, r.height() as f64);
     let Some(g) = slidecraft_geom::preset::build(name, w, h, &[]) else { return };
     for sp in &g.paths {
         let mut pts: Vec<egui::Pos2> = vec![];

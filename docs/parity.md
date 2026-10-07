@@ -11,18 +11,18 @@ Each row is scored **D** (done), **P** (partial: works but lacks options, UI or 
 Live Presentations), add-ins and VBA macros.
 
 <!-- SUMMARY -->
-**Weighted breadth parity: 73%** over 187 features.
+**Weighted breadth parity: 74%** over 187 features.
 
 | Priority | Features | Done | Partial | Missing | Parity |
 |---|---|---|---|---|---|
-| P0 | 72 | 55 | 15 | 2 | 87% |
+| P0 | 72 | 55 | 16 | 1 | 88% |
 | P1 | 65 | 32 | 23 | 10 | 67% |
 | P2 | 50 | 11 | 11 | 28 | 33% |
 
 | Area | Parity |
 |---|---|
 | Application shell | 71% |
-| Files | 54% |
+| Files | 59% |
 | Slides | 95% |
 | Views | 90% |
 | Masters & themes | 80% |
@@ -44,7 +44,7 @@ Live Presentations), add-ins and VBA macros.
 | Automation (✱) | 100% |
 | Platforms (✱) | 25% |
 
-Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Shape Format, Picture Format, Table Design/Layout, Chart Design), Open PowerPoint .pptx, Save as PowerPoint .pptx, Autosave and crash recovery, Export to PDF, Format background (solid, gradient, picture, pattern), Connectors (straight, elbow, curved), Gradient fill (linear, radial, rectangular, path), Format Shape pane, Edit chart data, Crop (and crop to shape, aspect ratio), Insert audio (any common format), Audio/video playback in the show, Animation pane (reorder, timing), Presenter view (notes, next slide, timer), macOS, Windows, Linux builds.
+Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Shape Format, Picture Format, Table Design/Layout, Chart Design), Open PowerPoint .pptx, Save as PowerPoint .pptx, Autosave and crash recovery, Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending), Format background (solid, gradient, picture, pattern), Connectors (straight, elbow, curved), Gradient fill (linear, radial, rectangular, path), Format Shape pane, Edit chart data, Crop (and crop to shape, aspect ratio), Insert audio (any common format), Audio/video playback in the show, Animation pane (reorder, timing), Presenter view (notes, next slide, timer), macOS, Windows, Linux builds.
 
 ## Rows
 
@@ -70,7 +70,7 @@ Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Sh
 | Files | Save as template | P1 | D |
 | Files | Autosave and crash recovery | P0 | P |
 | Files | Document properties | P2 | D |
-| Files | Export to PDF | P0 | M |
+| Files | Export to PDF (slides, notes pages, handouts; text layer, links, bookmarks; vector artwork pending) | P0 | P |
 | Files | Export slides as PNG/JPEG | P0 | D |
 | Files | Export outline / RTF | P2 | P |
 | Files | Export video (MP4) / animated GIF | P2 | M |

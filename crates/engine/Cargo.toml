@@ -15,6 +15,7 @@ slidecraft-model = { workspace = true }
 slidecraft-fonts = { workspace = true }
 slidecraft-text = { workspace = true }
 slidecraft-render = { workspace = true }
+slidecraft-pdf = { workspace = true }
 slidecraft-format = { workspace = true }
 slidecraft-pptx = { workspace = true }
 serde = { workspace = true }

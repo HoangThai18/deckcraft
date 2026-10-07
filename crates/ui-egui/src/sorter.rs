@@ -186,10 +186,11 @@ pub fn outline_pane(app: &mut SlideApp, ui: &mut Ui) {
                         if resp.gained_focus() {
                             let _ = app.run("slide.go", json!({"index": i}));
                         }
-                        if resp.lost_focus() && v != cur_title {
-                            if let Some(tid) = title_shape {
-                                let _ = app.run("text.set", json!({"id": tid, "text": v}));
-                            }
+                        if resp.lost_focus()
+                            && v != cur_title
+                            && let Some(tid) = title_shape
+                        {
+                            let _ = app.run("text.set", json!({"id": tid, "text": v}));
                         }
                         if !resp.has_focus() {
                             ui.data_mut(|d| d.remove::<String>(id));

@@ -295,11 +295,8 @@ pub fn ui(app: &mut SlideApp, ui: &mut Ui) {
         let cur_step = show.state.step;
         let next_auto = show.timeline(&doc).step_is_auto(cur_step);
         let n_steps = show.timeline(&doc).steps();
-        if show.autoplay && cur_step < n_steps && idle > 0.3 {
-            actions.push(show.state.next(&doc));
-        } else if next_auto && cur_step < n_steps {
-            actions.push(show.state.next(&doc));
-        } else if !show.rehearse && show.state.auto_advance_due(&doc, idle) && !show.ended {
+        let step_due = cur_step < n_steps && ((show.autoplay && idle > 0.3) || next_auto);
+        if step_due || (!show.rehearse && show.state.auto_advance_due(&doc, idle) && !show.ended) {
             actions.push(show.state.next(&doc));
         } else if show.preview_only && cur_step >= n_steps && idle > 0.8 {
             keep = false;

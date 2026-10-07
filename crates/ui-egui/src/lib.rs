@@ -532,10 +532,10 @@ impl SlideApp {
         for e in events {
             match e {
                 egui::Event::Text(t) => {
-                    if self.session.active().is_some_and(|d| d.selection.text.is_some() || d.selection.shapes.len() == 1) {
-                        if let Err(e) = self.session.type_text(&t) {
-                            self.set_status(e.to_string());
-                        }
+                    if self.session.active().is_some_and(|d| d.selection.text.is_some() || d.selection.shapes.len() == 1)
+                        && let Err(e) = self.session.type_text(&t)
+                    {
+                        self.set_status(e.to_string());
                     }
                 }
                 egui::Event::Copy => {

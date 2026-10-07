@@ -15,7 +15,7 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(noundo "file.saveAs", "Save As…", ["File"], Some("Cmd+Shift+S"), "{path, format?}", has_doc, save_as),
         cmd!(noundo "file.saveTemplate", "Save as Template…", ["File"], None, "{path}", has_doc, save_as),
         cmd!(query "file.saveBytes", "Save to Data", [], None, "{format?: slidecraft|pptx} → {data: base64}", has_doc, save_bytes_cmd),
-        cmd!(noundo "file.export", "Export…", ["File"], None, "{path, format: png|jpeg|pptx|slidecraft|outline|pdf, slide?: index, scale?: px per pt}", has_doc, export),
+        cmd!(noundo "file.export", "Export…", ["File"], None, "{path, format: png|jpeg|pptx|slidecraft|outline|pdf, slide?: index, all?: bool, scale?: px per pt; pdf: layout?: slides|notes|handouts, perPage?: 1|2|3|4|6|9, dpi?, slides?: [index], includeHidden?, textLayer?, frame?}", has_doc, export),
         cmd!(query "file.render", "Render Slide", [], None, "{slide?: index, scale?, edit?: bool} → {png: base64, width, height}", has_doc, render),
         cmd!(noundo "file.close", "Close", ["File"], Some("Cmd+W"), "{}", has_doc, close),
         cmd!(
@@ -105,8 +105,31 @@ pub fn save_bytes(doc: &Presentation, format: &str) -> Result<Vec<u8>> {
     match format {
         "pptx" | "potx" | "ppsx" => slidecraft_pptx::export(doc).map_err(|e| EngineError::Other(e.to_string())),
         "outline" | "txt" => Ok(slidecraft_format::slides_to_outline(doc).into_bytes()),
+        "pdf" => slidecraft_pdf::export(doc, &Default::default()).map_err(|e| EngineError::Other(e.to_string())),
         _ => slidecraft_format::save(doc).map_err(|e| EngineError::Other(e.to_string())),
     }
+}
+
+/// PDF options from command params: `{layout: slides|notes|handouts, perPage, dpi, slides: [i],
+/// includeHidden, textLayer, frame}`.
+pub fn pdf_options(p: &Value) -> slidecraft_pdf::PdfOptions {
+    let mut o = slidecraft_pdf::PdfOptions { layout: slidecraft_pdf::PageLayout::Slides, ..Default::default() };
+    o.layout = match str_param(p, "layout").unwrap_or("slides") {
+        "notes" => slidecraft_pdf::PageLayout::Notes,
+        "handouts" => slidecraft_pdf::PageLayout::Handouts { per_page: usize_param(p, "perPage").unwrap_or(6).min(9) as u8 },
+        _ => slidecraft_pdf::PageLayout::Slides,
+    };
+    o.dpi = f64_or(p, "dpi", o.dpi).clamp(36.0, 600.0);
+    o.slides = p.get("slides").and_then(Value::as_array).map(|a| a.iter().filter_map(|v| v.as_u64().map(|x| x as usize)).collect());
+    o.include_hidden = bool_or(p, "includeHidden", false);
+    o.text_layer = bool_or(p, "textLayer", true);
+    o.frame_slides = bool_or(p, "frame", true);
+    o
+}
+
+/// PDF bytes for `doc` with [`pdf_options`] from `p`.
+pub fn pdf_bytes(doc: &Presentation, p: &Value) -> Result<Vec<u8>> {
+    slidecraft_pdf::export(doc, &pdf_options(p)).map_err(|e| EngineError::Other(e.to_string()))
 }
 
 pub fn format_for_path(path: &str) -> &'static str {
@@ -228,7 +251,11 @@ fn export(s: &mut Session, p: &Value) -> Result<Value> {
             }
             Ok(json!({"files": written}))
         }
-        "pdf" => Err(EngineError::Other("PDF export is not available yet".into())),
+        "pdf" => {
+            let bytes = slidecraft_pdf::export(&st.doc, &pdf_options(p)).map_err(|e| EngineError::Other(e.to_string()))?;
+            write_file(&path, &bytes)?;
+            Ok(json!({"path": path, "bytes": bytes.len()}))
+        }
         other => {
             let bytes = save_bytes(&st.doc, other)?;
             write_file(&path, &bytes)?;

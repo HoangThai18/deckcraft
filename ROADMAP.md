@@ -26,6 +26,7 @@ format plus PPTX), scriptable by agents (CLI, JSON control channel, MCP), and av
 - Views: Normal (thumbnails with sections, slide, notes), Outline, Slide Sorter, Notes Page,
   Slide Master; zoom; grayscale.
 - Review: comments, accessibility checker, spelling.
+- PDF export: slides, notes pages and handouts (1–9 per page) with a selectable real-text layer, hyperlinks and slide bookmarks (`file.export {format: "pdf", layout}`, File › Export…).
 - UI: PowerPoint-style ribbon with contextual tabs, ~240 original icons, status bar, panes, command
   palette, light/dark.
 - Automation: ~200 commands, every one reachable from `slidecraft-cli`, the app's JSON control
@@ -33,7 +34,7 @@ format plus PPTX), scriptable by agents (CLI, JSON control channel, MCP), and av
 
 **In progress:** PPTX import/export · web (WASM) build · release packaging for all platforms.
 
-**Next (in order):** PDF export · audio/video playback · Format Shape pane depth · connectors with
+**Next (in order):** vector PDF artwork · audio/video playback · Format Shape pane depth · connectors with
 glue, freeform and edit points · merge shapes · Animation Pane polish · native macOS menu bar ·
 print · Notes/Handout masters · equations · SVG pictures.
 
@@ -41,7 +42,7 @@ Milestone details live in `plan/execution-plan.md` (M0–M14, local planning not
 
 ## How far from full parity (estimate, 2026-10-07)
 
-**Breadth: ~73% weighted** (P0 core 87%, P1 67%, P2 33%) over the 187 features of the PowerPoint
+**Breadth: ~74% weighted** (P0 core 88%, P1 67%, P2 33%) over the 187 features of the PowerPoint
 catalogue, scored row by row in [docs/parity.md](docs/parity.md) (`cargo xtask parity` recomputes
 it). Many features scored done still lack some of PowerPoint's options, dialogs or pixel fidelity, so
 **overall parity including depth is about 55%**.
@@ -51,7 +52,7 @@ it). Many features scored done still lack some of PowerPoint's options, dialogs 
 
 | Work | Estimate |
 |---|---|
-| Open P0 (15 partial, 2 missing: PPTX fidelity, PDF export, media playback, Format Shape pane, presenter view…) | 30 h |
+| Open P0 (16 partial, 1 missing: PPTX fidelity, vector PDF, media playback, Format Shape pane, presenter view…) | 30 h |
 | Open P1 (23 partial, 10 missing: connectors/glue, freeform, merge shapes, print, multi-monitor, SVG…) | 45 h |
 | Open P2 (11 partial, 28 missing: equations, video export, 3-D, remove background, thesaurus…) | 40 h |
 | Depth and pixel fidelity of every ribbon group, dialog and pane against PowerPoint | 75 h |

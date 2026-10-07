@@ -38,7 +38,7 @@ pub fn to_color_image(img: &Image, grayscale: bool) -> ColorImage {
     let w = img.width as usize;
     let h = img.height as usize;
     let mut px = Vec::with_capacity(w * h);
-    for c in img.pixels.chunks_exact(4) {
+    for c in img.pixels.as_chunks::<4>().0 {
         let (r, g, b, a) = (c[0], c[1], c[2], c[3]);
         if grayscale {
             let y = ((r as u32 * 77 + g as u32 * 150 + b as u32 * 29) >> 8) as u8;

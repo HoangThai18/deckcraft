@@ -18,6 +18,7 @@ slidecraft-model = { path = "crates/model" }
 slidecraft-fonts = { path = "crates/fonts" }
 slidecraft-text = { path = "crates/text" }
 slidecraft-render = { path = "crates/render" }
+slidecraft-pdf = { path = "crates/pdf" }
 slidecraft-pptx = { path = "crates/pptx" }
 slidecraft-format = { path = "crates/format" }
 slidecraft-anim = { path = "crates/anim" }

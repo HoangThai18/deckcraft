@@ -10,6 +10,7 @@
 mod chart;
 mod images;
 mod paint;
+mod placed;
 mod table;
 
 use std::collections::HashMap;
@@ -28,6 +29,7 @@ use vello_common::filter_effects::{EdgeMode, Filter, FilterPrimitive};
 use vello_cpu::{RenderContext, Resources, peniko};
 
 pub use images::decode as decode_image;
+pub use placed::{Placed, PlacedLink, PlacedText, place_slide};
 
 /// Largest pixmap side we render (vello_cpu uses u16 sizes).
 pub const MAX_SIDE: u32 = 16_000;
