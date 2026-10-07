@@ -51,6 +51,7 @@ pub fn tool_kind(name: &str, preset: Option<&str>) -> Option<ToolKind> {
         "highlighter" => ToolKind::Ink { mode: "highlighter".into(), color: slidecraft_engine::model::Rgba::rgb(255, 230, 0), width: 10.0 },
         "eraser" => ToolKind::Ink { mode: "eraser".into(), color: slidecraft_engine::model::Rgba::BLACK, width: 2.0 },
         other if slidecraft_engine::geom::preset::info(other).is_some() => ToolKind::Shape { preset: other.to_string() },
+        other if slidecraft_engine::tools::is_freeform_tool(other) => ToolKind::Shape { preset: other.to_string() },
         _ => return None,
     })
 }

@@ -633,6 +633,18 @@ pub fn shapes_gallery(ui: &mut Ui) -> Option<&'static str> {
                         out = Some(p.name);
                     }
                 }
+                if cat == slidecraft_geom::preset::Category::Lines {
+                    for (name, label) in slidecraft_engine::tools::FREEFORM_TOOLS {
+                        let (r, resp) = ui.allocate_exact_size(vec2(26.0, 26.0), Sense::click());
+                        if resp.hovered() {
+                            ui.painter().rect_filled(r, CornerRadius::same(3), t.hover);
+                        }
+                        paint_freeform_icon(ui.painter(), r.shrink(5.0), name, t.text);
+                        if resp.on_hover_text(label).clicked() {
+                            out = Some(name);
+                        }
+                    }
+                }
             });
             ui.add_space(4.0);
         }
@@ -2341,4 +2353,17 @@ fn slide_master(app: &mut SlideApp, ui: &mut Ui) {
             run(app, "view.closeMaster", json!({}));
         }
     });
+}
+
+/// Gallery glyphs for the freeform tools: a wave (curve), a polygon (freeform), a squiggle (scribble).
+fn paint_freeform_icon(p: &egui::Painter, r: Rect, name: &str, ink: Color32) {
+    let at = |x: f32, y: f32| egui::pos2(r.min.x + x * r.width(), r.min.y + y * r.height());
+    let pts: Vec<egui::Pos2> = match name {
+        "curve" => (0..=24).map(|i| i as f32 / 24.0).map(|u| at(u, 0.5 - 0.38 * (u * std::f32::consts::TAU).sin())).collect(),
+        "freeform" => {
+            [(0.0, 0.85), (0.15, 0.2), (0.55, 0.45), (0.8, 0.05), (1.0, 0.75), (0.45, 1.0), (0.0, 0.85)].iter().map(|(x, y)| at(*x, *y)).collect()
+        }
+        _ => (0..=40).map(|i| i as f32 / 40.0).map(|u| at(u, 0.5 + 0.35 * (u * 19.0).sin() * (1.0 - u * 0.4))).collect(),
+    };
+    p.add(egui::Shape::line(pts, egui::Stroke::new(1.3, ink)));
 }

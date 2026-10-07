@@ -89,15 +89,63 @@ pub enum Hit {
 
 #[derive(Clone, Debug)]
 enum Drag {
-    Move { ids: Vec<ShapeId>, start: Point, origs: Vec<(ShapeId, Xfrm)>, moved: bool, duplicate: bool, enter_text: Option<(ShapeId, Point)> },
-    Resize { id: ShapeId, handle: u8, orig: Xfrm, start: Point },
-    LineEnd { id: ShapeId, end: u8, orig: Xfrm },
-    Rotate { ids: Vec<ShapeId>, center: Point, start: f64, origs: Vec<(ShapeId, Xfrm)> },
-    Adjust { id: ShapeId, index: usize, orig: Xfrm },
-    Marquee { start: Point, add: bool },
-    Create { start: Point },
-    TextSelect { shape: ShapeId },
-    Ink { points: Vec<(f64, f64, f32)> },
+    Move {
+        ids: Vec<ShapeId>,
+        start: Point,
+        origs: Vec<(ShapeId, Xfrm)>,
+        moved: bool,
+        duplicate: bool,
+        enter_text: Option<(ShapeId, Point)>,
+    },
+    Resize {
+        id: ShapeId,
+        handle: u8,
+        orig: Xfrm,
+        start: Point,
+    },
+    LineEnd {
+        id: ShapeId,
+        end: u8,
+        orig: Xfrm,
+    },
+    Rotate {
+        ids: Vec<ShapeId>,
+        center: Point,
+        start: f64,
+        origs: Vec<(ShapeId, Xfrm)>,
+    },
+    Adjust {
+        id: ShapeId,
+        index: usize,
+        orig: Xfrm,
+    },
+    Marquee {
+        start: Point,
+        add: bool,
+    },
+    Create {
+        start: Point,
+    },
+    TextSelect {
+        shape: ShapeId,
+    },
+    Ink {
+        points: Vec<(f64, f64, f32)>,
+    },
+    /// Freeform drawing (`freeform` polygon, `curve`, `scribble`): placed points; `pressed` while
+    /// the button is down (dragging adds scribbled points).
+    Freeform {
+        mode: String,
+        points: Vec<Point>,
+        pressed: bool,
+    },
+}
+
+/// Shape-gallery names that draw a freeform path instead of a preset.
+pub const FREEFORM_TOOLS: [(&str, &str); 3] = [("curve", "Curve"), ("freeform", "Freeform: Shape"), ("scribble", "Freeform: Scribble")];
+
+pub fn is_freeform_tool(name: &str) -> bool {
+    FREEFORM_TOOLS.iter().any(|f| f.0 == name)
 }
 
 /// A snapping guide line to draw (slide coordinates): vertical (x) or horizontal (y).
@@ -125,11 +173,21 @@ pub struct ToolState {
     /// site the end would glue to.
     pub sites: Vec<Point>,
     pub glue: Option<Point>,
+    /// Freeform being drawn: points so far (plus the rubber-band point), smoothed, and whether
+    /// the pointer is over the start (closing the shape).
+    pub path_preview: Vec<Point>,
+    pub path_smooth: bool,
+    pub path_closing: bool,
 }
 
 impl ToolState {
     pub fn dragging(&self) -> bool {
         self.drag.is_some()
+    }
+
+    /// A freeform path is being drawn (Enter/Escape/double-click finish it).
+    pub fn drawing_freeform(&self) -> bool {
+        matches!(self.drag, Some(Drag::Freeform { .. }))
     }
 }
 
@@ -209,6 +267,15 @@ impl Session {
         }
         match ev.kind {
             PointerKind::Move => {
+                if let Some(Drag::Freeform { points, mode, .. }) = &self.tool.drag {
+                    let closing = points.len() > 2 && points.first().is_some_and(|s| (*s - p).hypot() <= tol * 2.0);
+                    let mut v = points.clone();
+                    v.push(p);
+                    self.tool.path_preview = v;
+                    self.tool.path_smooth = mode == "curve";
+                    self.tool.path_closing = closing;
+                    return Ok(Value::Null);
+                }
                 self.tool.hover = self.hit_test(p, tol);
                 let line_tool = matches!(&self.tool.kind, ToolKind::Shape { preset } if slidecraft_geom::preset::is_line_like(preset));
                 if line_tool {
@@ -251,7 +318,25 @@ impl Session {
     }
 
     fn down(&mut self, p: Point, mods: Mods, tol: f64) -> Result<Value> {
+        if let Some(Drag::Freeform { mode, mut points, .. }) = self.tool.drag.clone() {
+            // Next click of a freeform: close on the start point, else add a vertex.
+            if points.len() > 2 && points.first().is_some_and(|s| (*s - p).hypot() <= tol * 2.0) {
+                self.tool.drag = Some(Drag::Freeform { mode, points, pressed: false });
+                return self.finish_freeform(true);
+            }
+            points.push(p);
+            self.tool.path_preview = points.clone();
+            self.tool.drag = Some(Drag::Freeform { mode, points, pressed: true });
+            return Ok(Value::Null);
+        }
         match self.tool.kind.clone() {
+            ToolKind::Shape { preset } if is_freeform_tool(&preset) => {
+                self.tool.drag = Some(Drag::Freeform { mode: preset.clone(), points: vec![p], pressed: true });
+                self.tool.path_preview = vec![p];
+                self.tool.path_smooth = preset == "curve";
+                self.tool.path_closing = false;
+                return Ok(Value::Null);
+            }
             ToolKind::Shape { .. } | ToolKind::TextBox => {
                 self.tool.drag = Some(Drag::Create { start: p });
                 self.tool.preview = Some(Xfrm::new(p.x, p.y, 0.0, 0.0));
@@ -539,6 +624,18 @@ impl Session {
                     })?;
                 }
             }
+            Drag::Freeform { mode, mut points, pressed } => {
+                // Dragging scribbles (except for curves, which only take clicked points).
+                if pressed && mode != "curve" && points.last().is_none_or(|l| (*l - p).hypot() >= 1.5) {
+                    points.push(p);
+                }
+                let mut v = points.clone();
+                if mode == "curve" {
+                    v.push(p);
+                }
+                self.tool.path_preview = v;
+                self.tool.drag = Some(Drag::Freeform { mode, points, pressed });
+            }
             Drag::Ink { mut points } => {
                 points.push((p.x, p.y, 0.5));
                 self.tool.ink_preview = points.clone();
@@ -633,6 +730,17 @@ impl Session {
                 }
                 out = res;
             }
+            Some(Drag::Freeform { mode, points, .. }) => {
+                if mode == "scribble" {
+                    // A scribble ending back at its start closes into a filled shape.
+                    let closed = points.len() > 3 && points.first().zip(points.last()).is_some_and(|(a, b)| (*a - *b).hypot() <= 6.0);
+                    self.tool.drag = Some(Drag::Freeform { mode, points, pressed: false });
+                    return self.finish_freeform(closed);
+                }
+                // Polygon / curve: keep going until double-click, Enter or a click on the start.
+                self.tool.drag = Some(Drag::Freeform { mode, points, pressed: false });
+                return Ok(Value::Null);
+            }
             Some(Drag::Ink { points }) => {
                 self.tool.ink_preview.clear();
                 if points.len() > 1 {
@@ -655,6 +763,14 @@ impl Session {
     }
 
     fn double_click(&mut self, p: Point, tol: f64) -> Result<Value> {
+        if let Some(Drag::Freeform { mode, mut points, .. }) = self.tool.drag.clone() {
+            // The double-click's own click added a duplicate vertex.
+            while points.len() > 2 && points.last().zip(points.get(points.len() - 2)).is_some_and(|(a, b)| (*a - *b).hypot() <= tol) {
+                points.pop();
+            }
+            self.tool.drag = Some(Drag::Freeform { mode, points, pressed: false });
+            return self.finish_freeform(false);
+        }
         if !matches!(self.tool.kind, ToolKind::Select) {
             // Double-click while drawing: lock drawing mode off.
             self.tool.sticky = false;
@@ -696,6 +812,21 @@ impl Session {
 
     fn is_picture(&self, id: ShapeId) -> bool {
         self.active().and_then(|d| d.shape(id)).is_some_and(|s| matches!(s.kind, ShapeKind::Picture { .. } | ShapeKind::Media(_)))
+    }
+
+    /// End the freeform being drawn: create the shape (if it has at least two points).
+    pub fn finish_freeform(&mut self, closed: bool) -> Result<Value> {
+        let Some(Drag::Freeform { mode, points, .. }) = self.tool.drag.take() else { return Ok(Value::Null) };
+        self.tool.path_preview.clear();
+        self.tool.path_closing = false;
+        if !self.tool.sticky {
+            self.tool.kind = ToolKind::Select;
+        }
+        if points.len() < 2 {
+            return Ok(Value::Null);
+        }
+        let pts: Vec<[f64; 2]> = points.iter().map(|q| [q.x, q.y]).collect();
+        self.execute("shape.freeform", &json!({"points": pts, "closed": closed, "smooth": mode == "curve"}))
     }
 
     /// The connection site within glue range of `p` (excluding shape `exclude`).

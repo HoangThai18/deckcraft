@@ -20,6 +20,15 @@ pub fn specs() -> Vec<CommandSpec> {
             has_slide,
             connect
         ),
+        cmd!(
+            "shape.freeform",
+            "Freeform",
+            ["Insert", "Shapes"],
+            None,
+            "{points: [[x, y], …] slide pt (≥ 2), closed?: bool (filled shape), smooth?: bool (curve through the points)} → {id}",
+            has_slide,
+            freeform
+        ),
         cmd!(query "shape.sites", "Connection Sites", [], None, "{id} → [[x, y]] connection sites in slide points", has_slide, sites),
         cmd!("shape.move", "Move", [], None, "{dx?, dy?: pt (relative) | x?, y?: pt (absolute), ids?}", has_selection, move_by),
         cmd!("shape.resize", "Size", ["Shape Format", "Size"], None, "{w?, h?: pt, lockAspect?: bool, ids?}", has_selection, resize),
@@ -730,4 +739,81 @@ fn connect(s: &mut Session, p: &Value) -> Result<Value> {
         Ok(())
     })?;
     Ok(json!({"id": id.0, "fromSite": ia, "toSite": ib}))
+}
+
+/// Path data through `pts` (shape-local): straight segments, or a Catmull-Rom curve as cubics.
+pub fn freeform_path(pts: &[slidecraft_geom::Point], closed: bool, smooth: bool) -> String {
+    let f = |v: f64| {
+        let s = format!("{:.2}", v);
+        s.trim_end_matches('0').trim_end_matches('.').to_string()
+    };
+    let mut d = format!("M {} {}", f(pts[0].x), f(pts[0].y));
+    let n = pts.len();
+    if smooth && n > 2 {
+        let at = |i: isize| -> slidecraft_geom::Point {
+            if closed { pts[i.rem_euclid(n as isize) as usize] } else { pts[i.clamp(0, n as isize - 1) as usize] }
+        };
+        let segs = if closed { n } else { n - 1 };
+        for i in 0..segs as isize {
+            let (p0, p1, p2, p3) = (at(i - 1), at(i), at(i + 1), at(i + 2));
+            let c1 = p1 + (p2 - p0) / 6.0;
+            let c2 = p2 - (p3 - p1) / 6.0;
+            d += &format!(" C {} {} {} {} {} {}", f(c1.x), f(c1.y), f(c2.x), f(c2.y), f(p2.x), f(p2.y));
+        }
+    } else {
+        for q in &pts[1..] {
+            d += &format!(" L {} {}", f(q.x), f(q.y));
+        }
+    }
+    if closed {
+        d += " Z";
+    }
+    d
+}
+
+fn freeform(s: &mut Session, p: &Value) -> Result<Value> {
+    let pts: Vec<slidecraft_geom::Point> = p
+        .get("points")
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(|v| Some(slidecraft_geom::Point::new(v.get(0)?.as_f64()?, v.get(1)?.as_f64()?)))
+                .filter(|q| q.x.is_finite() && q.y.is_finite())
+                .take(20_000)
+                .collect()
+        })
+        .unwrap_or_default();
+    if pts.len() < 2 {
+        return Err(bad("shape.freeform", "need at least two points"));
+    }
+    let closed = bool_or(p, "closed", false) && pts.len() > 2;
+    let smooth = bool_or(p, "smooth", false);
+    let mut bb = slidecraft_geom::Rect::from_points(pts[0], pts[0]);
+    for q in &pts {
+        bb = bb.union_pt(*q);
+    }
+    let (w, h) = (bb.width().max(1.0), bb.height().max(1.0));
+    let local: Vec<slidecraft_geom::Point> = pts.iter().map(|q| slidecraft_geom::Point::new(q.x - bb.x0, q.y - bb.y0)).collect();
+    let d = freeform_path(&local, closed, smooth);
+    // Closed shapes take the default shape style, open paths the line style.
+    let r = s.execute("shape.insert", &json!({"preset": if closed { "rect" } else { "line" }, "rect": [bb.x0, bb.y0, w, h]}))?;
+    let id = slidecraft_model::ShapeId(r.get("id").and_then(Value::as_u64).ok_or_else(|| bad("shape.freeform", "insert failed"))? as u32);
+    s.edit(|doc, sel| {
+        let list = crate::shapes_mut(doc, sel).ok_or_else(|| bad("shape.freeform", "no slide"))?;
+        let sh = slidecraft_model::find_shape_mut(list, id).ok_or_else(|| bad("shape.freeform", "insert failed"))?;
+        sh.geom = Geom::Custom {
+            paths: vec![slidecraft_model::CustomPath {
+                w,
+                h,
+                d: d.clone(),
+                fill: if closed { slidecraft_geom::preset::FillMode::Norm } else { slidecraft_geom::preset::FillMode::None },
+                stroke: true,
+            }],
+        };
+        sh.xfrm = Some(slidecraft_geom::Xfrm::new(bb.x0, bb.y0, w, h));
+        sh.kind = slidecraft_model::ShapeKind::Shape;
+        sh.name = format!("Freeform {}", id.0);
+        Ok(())
+    })?;
+    Ok(json!({"id": id.0}))
 }

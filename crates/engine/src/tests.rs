@@ -310,3 +310,59 @@ fn drawing_a_line_between_shapes_glues_it() {
     let (p0, p1) = line_ends(&s, id);
     assert!((p0.x - 200.0).abs() < 1e-6 && (p1.x - 400.0).abs() < 1e-6, "{p0:?} {p1:?}");
 }
+
+#[test]
+fn freeform_tools_and_command() {
+    let mut s = session();
+    let before = s.doc().unwrap().shapes().len();
+    // Composite command: one undo step.
+    let r = s.execute("shape.freeform", &json!({"points": [[100, 100], [200, 120], [150, 220]], "closed": true})).unwrap();
+    assert!(r["id"].as_u64().is_some());
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(s.doc().unwrap().shapes().len(), before);
+    s.execute("edit.redo", &json!({})).unwrap();
+    assert_eq!(s.doc().unwrap().shapes().len(), before + 1);
+
+    let ev = |kind, x: f64, y: f64| tools::PointerEvent { kind, x, y, mods: Default::default(), tol: 3.0 };
+    // Polygon: click, click, click, click on the start → closed, filled.
+    s.set_tool(tools::ToolKind::Shape { preset: "freeform".into() });
+    for (x, y) in [(300.0, 300.0), (400.0, 300.0), (400.0, 400.0)] {
+        s.pointer(ev(tools::PointerKind::Down, x, y)).unwrap();
+        s.pointer(ev(tools::PointerKind::Up, x, y)).unwrap();
+    }
+    assert!(s.tool.drawing_freeform());
+    s.pointer(ev(tools::PointerKind::Down, 301.0, 301.0)).unwrap();
+    assert!(!s.tool.drawing_freeform());
+    let st = s.doc().unwrap();
+    let sh = st.shapes().last().unwrap();
+    match &sh.geom {
+        slidecraft_model::Geom::Custom { paths } => assert!(paths[0].d.ends_with('Z') && paths[0].d.matches(" L ").count() == 2, "{}", paths[0].d),
+        g => panic!("{g:?}"),
+    }
+    let x = sh.xfrm.unwrap();
+    assert_eq!((x.x, x.y, x.w, x.h), (300.0, 300.0, 100.0, 100.0));
+
+    // Scribble: one drag, open path.
+    s.set_tool(tools::ToolKind::Shape { preset: "scribble".into() });
+    s.pointer(ev(tools::PointerKind::Down, 10.0, 10.0)).unwrap();
+    for i in 1..20 {
+        s.pointer(ev(tools::PointerKind::Drag, 10.0 + i as f64 * 5.0, 10.0 + (i as f64).sin() * 10.0)).unwrap();
+    }
+    let r = s.pointer(ev(tools::PointerKind::Up, 110.0, 10.0)).unwrap();
+    assert!(r["id"].as_u64().is_some());
+    assert_eq!(s.tool.kind, tools::ToolKind::Select);
+
+    // Curve: clicks then Enter → smooth open path.
+    s.set_tool(tools::ToolKind::Shape { preset: "curve".into() });
+    for (x, y) in [(500.0, 100.0), (550.0, 50.0), (600.0, 100.0), (650.0, 50.0)] {
+        s.pointer(ev(tools::PointerKind::Down, x, y)).unwrap();
+        s.pointer(ev(tools::PointerKind::Up, x, y)).unwrap();
+    }
+    let r = s.key("Enter", Default::default()).unwrap();
+    let id = slidecraft_model::ShapeId(r["id"].as_u64().unwrap() as u32);
+    let st = s.doc().unwrap();
+    match &st.shape(id).unwrap().geom {
+        slidecraft_model::Geom::Custom { paths } => assert_eq!(paths[0].d.matches(" C ").count(), 3),
+        g => panic!("{g:?}"),
+    }
+}

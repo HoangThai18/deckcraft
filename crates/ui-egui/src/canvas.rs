@@ -381,6 +381,28 @@ fn overlays(app: &mut SlideApp, ui: &Ui, painter: &egui::Painter, xf: Xf, t: &To
     if let Some(pv) = app.session.tool.preview {
         draw_preview(app, painter, xf, pv, t);
     }
+    // Freeform being drawn.
+    let path = &app.session.tool.path_preview;
+    if path.len() > 1 {
+        let pts: Vec<Point> = if app.session.tool.path_smooth && path.len() > 2 {
+            let d = slidecraft_engine::cmd::shape::freeform_path(path, false, true);
+            let mut v = vec![];
+            let bp = slidecraft_render::parse_path(&d);
+            slidecraft_geom::preset_flatten(&bp, &mut |el| match el {
+                slidecraft_geom::PathEl::MoveTo(q) | slidecraft_geom::PathEl::LineTo(q) => v.push(q),
+                _ => {}
+            });
+            v
+        } else {
+            path.clone()
+        };
+        painter.add(egui::Shape::line(pts.iter().map(|q| xf.to_screen(*q)).collect(), Stroke::new(1.5, t.accent)));
+        if app.session.tool.path_closing
+            && let Some(s0) = path.first()
+        {
+            painter.circle(xf.to_screen(*s0), 5.0, t.accent, Stroke::new(1.5, t.handle_fill));
+        }
+    }
     // Connection sites of the shape under a connector end, and the site it would glue to.
     for q in &app.session.tool.sites {
         let c = xf.to_screen(*q);

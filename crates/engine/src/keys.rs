@@ -29,6 +29,9 @@ impl Session {
         let has_shapes = self.active().is_some_and(|d| !d.selection.shapes.is_empty());
         let k = key.to_ascii_lowercase();
         let k = k.trim_start_matches("arrow");
+        if self.tool.drawing_freeform() && matches!(k, "enter" | "return" | "escape") {
+            return self.finish_freeform(false);
+        }
         if editing && !mods.cmd {
             let r = match k {
                 "left" => Some(self.execute("text.move", &json!({"to": if mods.alt { "wordLeft" } else { "left" }, "extend": mods.shift}))),

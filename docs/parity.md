@@ -16,7 +16,7 @@ Live Presentations), add-ins and VBA macros.
 | Priority | Features | Done | Partial | Missing | Parity |
 |---|---|---|---|---|---|
 | P0 | 72 | 58 | 13 | 1 | 90% |
-| P1 | 65 | 33 | 23 | 9 | 68% |
+| P1 | 65 | 34 | 23 | 8 | 70% |
 | P2 | 50 | 11 | 11 | 28 | 33% |
 
 | Area | Parity |
@@ -26,7 +26,7 @@ Live Presentations), add-ins and VBA macros.
 | Slides | 95% |
 | Views | 90% |
 | Masters & themes | 80% |
-| Shapes | 72% |
+| Shapes | 79% |
 | Format | 75% |
 | Arrange | 100% |
 | Text | 83% |
@@ -115,7 +115,7 @@ Open P0 items: Start screen (new, templates/themes, recent), Contextual tabs (Sh
 | Shapes | Adjustment handles | P0 | D |
 | Shapes | Connectors (straight, elbow, curved) | P0 | D |
 | Shapes | Connector glue to connection sites | P1 | D |
-| Shapes | Freeform, curve and scribble tools | P1 | M |
+| Shapes | Freeform, curve and scribble tools | P1 | D |
 | Shapes | Edit points | P1 | M |
 | Shapes | Merge shapes (union, combine, fragment, intersect, subtract) | P1 | M |
 | Shapes | Change shape | P1 | D |

@@ -267,6 +267,9 @@ pub struct Session {
     pub painter: Option<(cmd::format::Painted, bool)>,
     /// Set as Default Shape: the look new shapes get.
     pub default_look: Option<cmd::format::Painted>,
+    /// Nesting of commands run by commands: only the outermost one is an undo step and a journal
+    /// entry.
+    depth: u32,
 }
 
 impl Default for Session {
@@ -289,6 +292,7 @@ impl Session {
             untitled: 0,
             default_look: None,
             painter: None,
+            depth: 0,
         }
     }
     /// A session with one new presentation open.
@@ -351,7 +355,11 @@ impl Session {
             }
         }
         let before = self.active().map(|d| (d.uid, d.doc.clone(), d.selection.clone()));
-        let r = (spec.run)(self, params)?;
+        let outer = self.depth == 0;
+        self.depth += 1;
+        let r = (spec.run)(self, params);
+        self.depth -= 1;
+        let r = r?;
         if let Some(st) = self.active_mut() {
             clamp_selection(st);
         }
@@ -360,10 +368,11 @@ impl Session {
             && !Arc::ptr_eq(&old, &st.doc)
             && st.interaction.is_none()
             && spec.undoable
+            && outer
         {
             push_undo(st, HistoryEntry { label: spec.label.to_string(), doc: old, selection: sel });
         }
-        if spec.journal {
+        if spec.journal && outer {
             self.journal.push((id.to_string(), params.clone()));
             if self.journal.len() > 10_000 {
                 self.journal.drain(..1000);
